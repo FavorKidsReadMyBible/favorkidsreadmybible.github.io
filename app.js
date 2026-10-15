@@ -49,7 +49,7 @@ function nextChapter(p) {
 }
 // Launch catch-up: the first chapters can be read back to back, so kids who start late aren't behind.
 const CATCH_UP = 4;
-const catchUpOpen = p => !rereading(p) && nextChapter(p) <= CATCH_UP;
+const catchUpOpen = p => !rereading(p);   // read-ahead: the next chapter is always open (the streak still counts one day at a time)
 function todayChapter(p) {
   const key = todayKey();
   if (p.today?.date === key && !(completed(p, p.today.chapter) && catchUpOpen(p))) return p.today.chapter;
@@ -160,7 +160,7 @@ function render() {
     $('#readTodayButton').textContent = 'Come back tomorrow';
     $('#readTodayButton').disabled = !isMaster();
   } else {
-    $('#todayDescription').textContent = `${little ? 'Today’s reading' : 'Today’s chapter'}: ${q.title}. ${rereading(p) ? 'You finished Matthew — reading it again helps you notice new things!' : catchUpOpen(p) ? `Catch-up time: Matthew 1–${CATCH_UP} are all open, so you can read them back to back!` : 'Read it and get 3 of 3 quiz answers right to fly.'}`;
+    $('#todayDescription').textContent = `${little ? 'Today’s reading' : 'Today’s chapter'}: ${q.title}. ${rereading(p) ? 'You finished Matthew — reading it again helps you notice new things!' : catchUpOpen(p) && passedToday(p) ? 'Want to keep going? You can read ahead!' : catchUpOpen(p) ? 'Read it and get 3 of 3 quiz answers right to fly. Want more? You can read ahead!' : 'Read it and get 3 of 3 quiz answers right to fly.'}`;
     $('#readTodayButton').textContent = 'Read my Bible';
     $('#readTodayButton').disabled = false;
   }
@@ -533,7 +533,7 @@ function finishQuiz() {
   save(); render();
   SkyAudio.jingle(); if (streak(p) > 1) setTimeout(() => SkyAudio.sfx('flame'), 900);
   const homeReady = homeQuizReady(p);
-  openModal(`${header(finished ? 'MATTHEW COMPLETE' : 'CHAPTER COMPLETE', finished ? 'You finished Matthew!' : 'Great reading!')}${reward ? `<div class="reward-celebration">${cosmeticArt(reward)}</div><h3 style="text-align:center">Unlocked: ${reward.name}</h3>` : '<h3 style="text-align:center">You remembered it!</h3>'}<p style="text-align:center">${finished ? 'You read all 28 chapters! Tomorrow you’ll start again at Matthew 1 — every reread shows you something new.' : catchUpOpen(p) ? `All three answers right! Sky Run is open. Catch-up time: you can read Matthew ${nextChapter(p)} right now too!` : 'All three answers right! Sky Run is open — fly as much as you like today. Come back tomorrow to read your Bible again.'}</p>${homeReady ? '<div class="notice">Your home bar is full! Take the home quiz to upgrade your home.</div>' : ''}<div class="two-col">${reward ? '<button id="rewardNext" class="button secondary">Try it on</button>' : homeReady ? '<button id="homeQuizNext" class="button secondary">Home quiz</button>' : '<button id="closeDone" class="button secondary">Done</button>'}<button id="finishNext" class="button primary">Play Sky Run</button></div>`);
+  openModal(`${header(finished ? 'MATTHEW COMPLETE' : 'CHAPTER COMPLETE', finished ? 'You finished Matthew!' : 'Great reading!')}${reward ? `<div class="reward-celebration">${cosmeticArt(reward)}</div><h3 style="text-align:center">Unlocked: ${reward.name}</h3>` : '<h3 style="text-align:center">You remembered it!</h3>'}<p style="text-align:center">${finished ? 'You read all 28 chapters! Tomorrow you’ll start again at Matthew 1 — every reread shows you something new.' : catchUpOpen(p) ? `All three answers right! Sky Run is open. Want to keep going? You can read ahead to Matthew ${nextChapter(p)}!` : 'All three answers right! Sky Run is open — fly as much as you like today. Come back tomorrow to read your Bible again.'}</p>${homeReady ? '<div class="notice">Your home bar is full! Take the home quiz to upgrade your home.</div>' : ''}<div class="two-col">${reward ? '<button id="rewardNext" class="button secondary">Try it on</button>' : homeReady ? '<button id="homeQuizNext" class="button secondary">Home quiz</button>' : '<button id="closeDone" class="button secondary">Done</button>'}<button id="finishNext" class="button primary">Play Sky Run</button></div>`);
   $('#rewardNext')?.addEventListener('click', () => showRewards(reward.type, reward.id));
   $('#homeQuizNext')?.addEventListener('click', startHomeQuiz);
   if (catchUpOpen(p)) { const b = document.createElement('button'); b.className = 'button primary wide'; b.style.marginTop = '12px'; b.textContent = `Read Matthew ${nextChapter(p)} next`; b.onclick = () => showReading(todayChapter(p)); $('#modalCard').append(b); }
