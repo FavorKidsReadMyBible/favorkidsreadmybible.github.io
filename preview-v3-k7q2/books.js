@@ -1,14 +1,14 @@
-// Books of the Bible the game can read. Matthew uses the original data files; the other Gospels use books/q-*.js.
+// Books of the Bible the game can read. Matthew uses the original data files; the others use books/q-*.js.
+// November 2026: everyone reads Mark (the default book). Luke opens in December: remove its `soon` line then.
 // Loaded after content.js and before app.js.
 const BOOKS = [
   { id: 'matthew', name: 'Matthew', n: 28, color: '#c86354', blurb: 'Jesus the promised King' },
   { id: 'mark', name: 'Mark', n: 16, color: '#59877d', blurb: 'Jesus the fast-moving servant' },
-  { id: 'luke', name: 'Luke', n: 24, color: '#a28fbc', blurb: 'Jesus who came for everyone' },
-  { id: 'john', name: 'John', n: 21, color: '#faa731', blurb: 'Jesus the Light of the world' },
-  { id: 'acts', name: 'Acts', n: 28, color: '#2e8fe6', blurb: 'The Holy Spirit and the first church' }
+  { id: 'luke', name: 'Luke', n: 24, color: '#a28fbc', blurb: 'Jesus who came for everyone', soon: 'Opens in December' }
 ];
+const DEFAULT_BOOK = 'mark';
 const BOOK_BASE = () => (window.V3_BASE || '');
-const curBookId = p => (p && BOOKS.some(b => b.id === p.book) ? p.book : 'matthew');
+const curBookId = p => (p && BOOKS.some(b => b.id === p.book) && !bookInfo(p.book).soon ? p.book : DEFAULT_BOOK);
 const bookInfo = id => BOOKS.find(b => b.id === id) || BOOKS[0];
 const curBook = p => bookInfo(curBookId(p));
 function bookDone(p, id = curBookId(p)) {

@@ -244,15 +244,16 @@
     const p = profile(); if (!p) return; const d = v3(p), open = canPlay(p);
     openModal(`${header('ARCADE', open ? 'Pick a game!' : 'Read first to play')}<div class="v3-arcade-top"><span class="v3-light-pill"><span class="v3-light-ico"></span><b>${d.light}</b> Light</span><small>${open ? 'Sky Run is free today. The other games use 1 Light each.' : 'Read today’s chapter and pass the quiz to open the Arcade.'}</small></div>
       <div class="v3-games">${GAMES.map(g => `<button class="v3-game ${g.id}" data-g="${g.id}" ${!open || d.light < g.cost ? 'disabled' : ''}><span class="v3-game-art"></span><span class="v3-game-txt"><b>${g.name}</b><small>${g.about}</small></span><span class="v3-cost">${g.cost ? `<span class="v3-light-ico"></span>${g.cost}` : 'FREE'}</span></button>`).join('')}</div>
-      ${open && d.light < 1 ? '<p class="fineprint">Earn Light by passing quizzes, the Bible + School bonus, the memory verse and the Sunday code.</p>' : ''}`);
+      ${open ? '' : `<button id="v3GoRead" class="button primary wide">Read ${esc(curBook(p).name)} ${todayChapter(p)} to unlock</button>`}${open && d.light < 1 ? '<p class="fineprint">Earn Light by passing quizzes, the Bible + School bonus, the memory verse and the Sunday code.</p>' : ''}`);
     $('#modalCard').querySelectorAll('[data-g]').forEach(b => b.onclick = () => playGame(b.dataset.g));
+    $('#v3GoRead')?.addEventListener('click', () => showReading(todayChapter(p)));
   }
   function playGame(id) {
     const p = profile(), d = v3(p), g = GAMES.find(x => x.id === id);
     if (!canPlay(p)) { toast('Read today’s chapter first'); return; }
-    if (id === 'sky') { closeModal(); openGame(); return; }
+    if (id === 'sky') { d.plays = d.plays || {}; d.plays.sky = (d.plays.sky || 0) + 1; save(); checkAwards(p, true); closeModal(); openGame(); return; }
     if (d.light < g.cost) { toast('You need more Light. Read to earn it!'); return; }
-    d.light -= g.cost; save(); closeModal(); sfx('open');
+    d.light -= g.cost; d.plays = d.plays || {}; d.plays[id] = (d.plays[id] || 0) + 1; save(); closeModal(); sfx('open'); checkAwards(p);
     const ch = Math.max(1, ...p.completed.length ? p.completed : [1]);
     const layer = document.createElement('div'); layer.className = 'v3-play'; layer.innerHTML = `<div class="v3-play-bar"><b>${g.name}</b><span class="v3-light-pill"><span class="v3-light-ico"></span>${d.light}</span><button class="icon-button" aria-label="Close game">×</button></div><iframe title="${g.name}" src="${window.V3_BASE || ''}arcade/${id}.html?ch=${ch}&age=${p.age}&name=${encodeURIComponent(firstName(p))}" allow="autoplay"></iframe>`;
     document.body.append(layer); document.body.classList.add('playing');
@@ -261,6 +262,82 @@
   }
   window.showArcade = showArcade;
 
+
+  // ---------- Awards & achievements ----------
+  // Each award is checked from saved progress, so kids who already read a lot get theirs straight away.
+  // New awards give +2 Light and pop up a banner. Arcade games can report wins with postMessage({rmb:'award', key}).
+  const totalStars = d => Object.values(d.stars).reduce((a, b) => a + b, 0);
+  const golds = d => Object.values(d.stars).filter(x => x === 3).length;
+  const count = o => Object.keys(o || {}).length;
+  const prayers = p => (p.journal || []).filter(e => /PRAY|Pray/.test(e.title || '')).length;
+  const AWARDS = [
+    // reading
+    { id: 'first', cat: 'read', ico: '📖', name: 'First Step', how: 'Read your first chapter', test: p => totalChapters(p) >= 1 },
+    { id: 'read7', cat: 'read', ico: '🔦', name: 'Bookworm', how: 'Read 7 chapters', test: p => totalChapters(p) >= 7 },
+    { id: 'read14', cat: 'read', ico: '🧭', name: 'Trailblazer', how: 'Read 14 chapters', test: p => totalChapters(p) >= 14 },
+    { id: 'matthew', cat: 'read', ico: '👑', name: 'Matthew Master', how: 'Finish all 28 chapters of Matthew', test: p => bookDone(p, 'matthew').length >= 28 },
+    { id: 'mark', cat: 'read', ico: '🦁', name: 'Mark Finisher', how: 'Finish all 16 chapters of Mark', test: p => bookDone(p, 'mark').length >= 16 },
+    { id: 'read50', cat: 'read', ico: '🗺️', name: 'Bible Explorer', how: 'Read 50 chapters in all', test: p => totalChapters(p) >= 50 },
+    { id: 'reread', cat: 'read', ico: '🔁', name: 'Read It Again', how: 'Reread a book you finished', test: p => (p.rereadCount || 0) >= 1 },
+    // streaks
+    { id: 'streak3', cat: 'fire', ico: '🔥', name: 'On Fire', how: 'Read 3 days in a row', test: p => streak(p) >= 3 },
+    { id: 'streak7', cat: 'fire', ico: '⚡', name: 'Week Warrior', how: 'Read 7 days in a row', test: p => streak(p) >= 7 },
+    { id: 'streak14', cat: 'fire', ico: '🚀', name: 'Unstoppable', how: 'Read 14 days in a row', test: p => streak(p) >= 14 },
+    { id: 'streak30', cat: 'fire', ico: '🏆', name: 'Faithful Flame', how: 'Read 30 days in a row', test: p => streak(p) >= 30 },
+    // quizzes
+    { id: 'gold1', cat: 'star', ico: '⭐', name: 'Perfect!', how: 'Get every quiz answer right (3 stars)', test: (p, d) => golds(d) >= 1 },
+    { id: 'gold10', cat: 'star', ico: '🌟', name: 'Star Collector', how: 'Get 3 stars on 10 chapters', test: (p, d) => golds(d) >= 10 },
+    { id: 'stars50', cat: 'star', ico: '💫', name: 'Superstar', how: 'Collect 50 stars', test: (p, d) => totalStars(d) >= 50 },
+    { id: 'school1', cat: 'star', ico: '🎓', name: 'Smart Cookie', how: 'Do a Bible + School bonus', test: (p, d) => count(d.school) >= 1 },
+    { id: 'school5', cat: 'star', ico: '🧪', name: 'Scholar', how: 'Do 5 Bible + School bonuses', test: (p, d) => count(d.school) >= 5 },
+    // heart
+    { id: 'memory1', cat: 'heart', ico: '💛', name: 'Hidden in My Heart', how: 'Learn a memory verse', test: (p, d) => count(d.memory) >= 1 },
+    { id: 'memory4', cat: 'heart', ico: '📜', name: 'Verse Keeper', how: 'Learn 4 memory verses', test: (p, d) => count(d.memory) >= 4 },
+    { id: 'heart1', cat: 'heart', ico: '💌', name: 'Open Heart', how: 'Answer a Heart Moment', test: p => (p.journal || []).length >= 1 },
+    { id: 'pray5', cat: 'heart', ico: '🙏', name: 'Prayer Warrior', how: 'Pray for others 5 times', test: p => prayers(p) >= 5 },
+    { id: 'sunday1', cat: 'heart', ico: '⛪', name: 'Sunday Sleuth', how: 'Find a Sunday code word', test: (p, d) => count(d.sunday) >= 1 },
+    { id: 'sunday4', cat: 'heart', ico: '🔑', name: 'Never Miss a Sunday', how: 'Find 4 Sunday code words', test: (p, d) => count(d.sunday) >= 4 },
+    // play
+    { id: 'mansion', cat: 'play', ico: '🏰', name: 'Mansion Builder', how: 'Upgrade your home to the mansion', test: p => (p.homeStage || 0) >= 3 },
+    { id: 'shine', cat: 'play', ico: '🕯️', name: 'Shining Light', how: 'Earn 50 Light', test: (p, d) => d.lifetime >= 50 },
+    { id: 'arcade', cat: 'play', ico: '🎮', name: 'Arcade Starter', how: 'Play a game in the Arcade', test: (p, d) => count(d.plays) >= 1 },
+    { id: 'cake', cat: 'play', ico: '🎂', name: 'Head Baker', how: 'Bake a perfect cake in Favor Bakery', test: (p, d) => !!d.flags?.cake },
+    { id: 'sheep3', cat: 'play', ico: '🐑', name: 'Good Shepherd', how: 'Bring home all 3 lost sheep', test: (p, d) => !!d.flags?.sheep3 }
+  ];
+  const CAT = { read: ['Reading', '#59877d'], fire: ['Streaks', '#c86354'], star: ['Quizzes', '#faa731'], heart: ['Heart', '#a28fbc'], play: ['Play', '#315b5a'] };
+  let awardQueue = [], awardShowing = false;
+  function checkAwards(p, quiet) {
+    if (!p) return; const d = v3(p); d.awards = d.awards || {}; const fresh = [];
+    for (const a of AWARDS) if (!d.awards[a.id]) { let ok = false; try { ok = a.test(p, d); } catch { } if (ok) { d.awards[a.id] = todayKey(); fresh.push(a); } }
+    if (!fresh.length) return;
+    // kids who already had progress before awards existed get them quietly, without a flood of banners
+    if (!d.awardsSeeded) { d.awardsSeeded = true; save(); if (fresh.length > 2) quiet = true; }
+    d.light += fresh.length * 2; d.lifetime += fresh.length * 2; save();
+    if (!quiet) { awardQueue.push(...fresh); nextAward(); }
+  }
+  function nextAward() {
+    if (awardShowing || !awardQueue.length) return; awardShowing = true;
+    const a = awardQueue.shift(), el = document.createElement('button'); el.className = 'v3-award-pop'; el.style.setProperty('--c', CAT[a.cat][1]);
+    el.innerHTML = `<span class="v3-badge big" style="--c:${CAT[a.cat][1]}">${a.ico}</span><span><small>NEW AWARD! +2 Light</small><b>${esc(a.name)}</b><i>${esc(a.how)}</i></span>`;
+    document.body.append(el); sfx('bonus'); buzz([20, 30, 20]); confetti(110);
+    const done = () => { el.classList.add('out'); setTimeout(() => { el.remove(); awardShowing = false; nextAward(); }, 350); };
+    el.onclick = () => { done(); showAwards(); }; setTimeout(done, 4200);
+  }
+  function showAwards() {
+    const p = profile(); if (!p) return; const d = v3(p); d.awards = d.awards || {};
+    const got = AWARDS.filter(a => d.awards[a.id]).length;
+    const groups = Object.entries(CAT).map(([k, [label, col]]) => `<h4 class="v3-aw-h" style="color:${col}">${label}</h4><div class="v3-aw-grid">${AWARDS.filter(a => a.cat === k).map(a => { const on = d.awards[a.id]; return `<div class="v3-aw ${on ? 'on' : ''}" style="--c:${col}"><span class="v3-badge">${on ? a.ico : '🔒'}</span><b>${esc(a.name)}</b><small>${esc(a.how)}</small></div>`; }).join('')}</div>`).join('');
+    openModal(`${header('MY AWARDS', `${got} of ${AWARDS.length} earned`)}<div class="v3-aw-bar"><span style="width:${got / AWARDS.length * 100}%"></span></div><p>Every award gives you <b>+2 Light</b> for the Arcade. Keep reading to unlock them all!</p>${groups}<button class="button primary wide" data-close>Close</button>`);
+  }
+  window.showAwards = showAwards;
+  addEventListener('message', e => {
+    const k = e.data && e.data.rmb === 'award' ? e.data.key : null; if (!k || !['cake', 'sheep3'].includes(k)) return;
+    const p = profile(); if (!p) return; const d = v3(p); d.flags = d.flags || {}; if (!d.flags[k]) { d.flags[k] = true; save(); checkAwards(p); }
+  });
+
+  // Little arcade-cabinet icon in brand colours (coral cabinet, gold screen glow, teal joystick)
+  const ARCADE_ICO = `<svg class="v3-arc-ico" viewBox="0 0 32 32" aria-hidden="true"><path d="M8 3h16a2 2 0 0 1 2 2v24H6V5a2 2 0 0 1 2-2z" fill="#c86354"/><path d="M6 29h20v1H6z" fill="#8f3f35"/><rect x="9" y="6" width="14" height="10" rx="2" fill="#29464a"/><rect x="10.5" y="7.5" width="11" height="7" rx="1.2" fill="#faa731"/><circle cx="13.5" cy="11" r="1.4" fill="#fff8eb"/><path d="M17 12.5l2-3 2 3z" fill="#fff8eb"/><rect x="7" y="18" width="18" height="5" rx="1.5" fill="#fbe8ca"/><rect x="11" y="16" width="1.6" height="4" rx=".8" fill="#29464a"/><circle cx="11.8" cy="15.6" r="1.8" fill="#59877d"/><circle cx="18" cy="20.5" r="1.3" fill="#c86354"/><circle cx="21.5" cy="20.5" r="1.3" fill="#59877d"/></svg>`;
+  const ENTER = `${ARCADE_ICO}<span>Enter the Arcade</span>`;
   // ---------- Dashboard cards ----------
   const origRender = window.render;
   window.render = function () {
@@ -270,19 +347,22 @@
     if (!row) { row = document.createElement('section'); row.id = 'v3Row'; row.className = 'dash-row v3-row'; $('#readRow').after(row); }
     row.classList.toggle('hidden', !p); if (!p) return;
     const d = v3(p), open = canPlay(p), m = memoryVerse(), wk = sundayOf(todayKey());
+    checkAwards(p);
     const total = Object.values(d.stars).reduce((a, b) => a + b, 0), B = curBook(p), bd = bookDone(p);
+    d.awards = d.awards || {}; const aw = AWARDS.filter(a => d.awards[a.id]).sort((a, b) => (d.awards[a.id] > d.awards[b.id]) - (d.awards[a.id] < d.awards[b.id])), nextUp = AWARDS.find(a => !d.awards[a.id]);
     row.innerHTML = `<div class="v3-grid">
-      <article class="card v3-arcade-card"><div class="panel-kicker">ARCADE</div><div class="v3-arcade-head"><h3>${open ? 'Pick a game!' : 'Read first, then play'}</h3><span class="v3-light-pill" title="Light you earned by reading"><span class="v3-light-ico"></span><b>${d.light}</b></span></div><div class="v3-mini-games">${GAMES.map(g => `<span class="v3-mini ${g.id}" title="${g.name}"></span>`).join('')}</div><p>${open ? 'Sky Run is free today. Favor Bakery and Lost Sheep Dash use 1 Light.' : 'Read today’s chapter and pass the quiz. Every quiz earns Light for the Arcade.'}</p><button id="v3ArcadeBtn" class="button ${open ? 'primary' : 'dark'} wide">${open ? 'Open the Arcade' : 'Read first to play'}</button></article>
+      <article class="card v3-arcade-card"><div class="panel-kicker">ARCADE</div><div class="v3-arcade-head"><h3>${open ? 'Pick a game!' : 'Read first, then play'}</h3><span class="v3-light-pill" title="Light you earned by reading"><span class="v3-light-ico"></span><b>${d.light}</b></span></div><div class="v3-mini-games">${GAMES.map(g => `<span class="v3-mini ${g.id}" title="${g.name}"></span>`).join('')}</div><p>${open ? 'Sky Run is free today. Favor Bakery and Lost Sheep Dash use 1 Light.' : 'Read today’s chapter and pass the quiz. Every quiz earns Light for the Arcade.'}</p><button id="v3ArcadeBtn" class="button primary wide v3-enter">${ENTER}</button></article>
       <article class="card v3-sticker-card"><div class="panel-kicker">STICKER BOOK</div><h3>${B.name} · ${bd.length} / ${B.n}</h3><div class="v3-strip" style="grid-template-columns:repeat(${Math.ceil(B.n / 2)},1fr)">${Array.from({ length: B.n }, (_, i) => `<i class="${completed(p, i + 1) ? 'on' : ''} ${d.stars[sKey(B.id, i + 1)] === 3 ? 'gold' : ''}"></i>`).join('')}</div><p>${total} stars so far. Get every answer right for 3 stars!</p><button id="v3StickBtn" class="button secondary wide">Open my sticker book</button></article>
       <article class="card v3-mem-card"><div class="panel-kicker">MEMORY VERSE · THIS WEEK</div><h3>${m.ref}</h3><p class="v3-mem-text">“${esc(m.text)}”</p><button id="v3MemBtn" class="button secondary wide">${d.memory[m.week] ? '✓ Learned! Practice again' : 'Learn it · +3 Light'}</button></article>
       <article class="card v3-sun-card"><div class="panel-kicker">SUNDAY CODE</div><h3>${d.sunday[wk] ? 'Found it! ✓' : 'Heard the code word?'}</h3><p>${d.sunday[wk] ? 'You found this week’s Sunday treasure.' : 'Listen at Favor Kids on Sunday for the secret word.'}</p><button id="v3SunBtn" class="button secondary wide" ${d.sunday[wk] ? 'disabled' : ''}>${d.sunday[wk] ? 'See you Sunday' : 'Enter the code · +5 Light'}</button></article>
+      <article class="card v3-awards-card"><div class="v3-aw-top"><div><div class="panel-kicker">MY AWARDS</div><h3>${aw.length} of ${AWARDS.length} earned</h3></div><button id="v3AwBtn" class="button secondary">See all awards</button></div><div class="v3-aw-row">${aw.length ? aw.slice(-8).reverse().map(a => `<span class="v3-badge" style="--c:${CAT[a.cat][1]}" title="${esc(a.name)}">${a.ico}</span>`).join('') : '<p>Read your first chapter to earn your first award!</p>'}${nextUp ? `<span class="v3-aw-next">Next: <b>${esc(nextUp.name)}</b> · ${esc(nextUp.how)}</span>` : ''}</div></article>
     </div>`;
     if (rereading(p) && matthewDone(p) && BOOKS.some(b => bookDone(p, b.id).length < b.n)) { const nb = document.createElement('div'); nb.className = 'v3-next-book'; nb.innerHTML = `<div><b>You finished ${B.name}! 🎉</b><small>Choose your next book: ${BOOKS.filter(b => bookDone(p, b.id).length < b.n).map(b => b.name).join(', ')}</small></div><button class="button primary">Choose a book</button>`; nb.querySelector('button').onclick = showChapters; row.prepend(nb); }
-    $('#v3ArcadeBtn').onclick = () => open ? showArcade() : showReading(todayChapter(p));
-    $('#v3StickBtn').onclick = showStickers; $('#v3MemBtn').onclick = showMemory; $('#v3SunBtn').onclick = showSunday;
+    $('#v3ArcadeBtn').onclick = showArcade;
+    $('#v3StickBtn').onclick = showStickers; $('#v3MemBtn').onclick = showMemory; $('#v3SunBtn').onclick = showSunday; $('#v3AwBtn').onclick = showAwards;
     // The Sky Run card now leads into the Arcade
-    if (open) { $('#playButton').textContent = 'Open the Arcade'; $('#playButton').onclick = showArcade; $('#gameDescription').textContent = 'Sky Run is free today. Use Light for the other games!'; }
-    else $('#playButton').onclick = () => openGame();
+    { const pb = $('#playButton'); pb.innerHTML = ENTER; pb.classList.add('v3-enter'); pb.disabled = false; pb.onclick = showArcade; }
+    $('#gameDescription').textContent = open ? 'All the games are inside! Sky Run is free today. Use Light for the others.' : 'Read today’s chapter to unlock the games inside.';
     // quiz description
     const t = tierOf(p), n = todayChapter(p), qn = quizPlan(p, n).length;
     const desc = $('#todayDescription'); if (desc && !/Come back tomorrow|Great job/.test(desc.textContent)) desc.textContent = desc.textContent.replace(/get 3 of 3 quiz answers right/g, `get ${needed(qn)} of ${qn} quiz answers right`);

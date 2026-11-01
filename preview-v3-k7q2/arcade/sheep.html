@@ -5,40 +5,41 @@
 [hidden]{display:none!important}
 /* Layout: night pasture — header + score bar, the maze canvas centred, a thumb d-pad under it on phones */
 :root{
-  --night:#0b1f3a; --hill:#123a5c; --hedge:#2f8f5b; --light:#ffe27a; --wool:#f5f1e8; --wolf:#8a93a6; --ink:#0b1f3a; --ember:#f95600;
+  --night:#1d3a3d; --hill:#2c5052; --hedge:#59877d; --light:#faa731; --wool:#fbe8ca; --wolf:#8a93a6; --ink:#29464a; --ember:#c86354; --paper:#fff8eb;
   --display:Agharti,Impact,sans-serif; --body:FavorSans,'Trebuchet MS',system-ui,sans-serif;
   color-scheme:dark;
 }
 html,body{height:100%}
-body{background:var(--night);color:var(--wool);font-family:var(--body);margin:0;overflow-x:hidden}
+body{background:radial-gradient(circle at 50% -20%,#3b6b68 0,transparent 55%),var(--night);color:var(--wool);font-family:var(--body);margin:0;overflow-x:hidden}
 .wrap{max-width:720px;margin:0 auto;padding-block:16px 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:12px;align-items:stretch}
 header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-h1{font-family:var(--display);font-weight:400;letter-spacing:1px;text-transform:uppercase;font-size:clamp(34px,7vw,54px);line-height:.9;margin:0;color:var(--light)}
-.draft{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;background:var(--hill);padding:6px 12px;border-radius:999px}
+h1{font-family:var(--display);font-weight:400;letter-spacing:1px;text-transform:uppercase;font-size:clamp(38px,7.5vw,60px);line-height:.88;margin:0;color:var(--light);text-shadow:0 3px 0 #a75f12}
+.kicker{display:block;font:700 12px var(--body);letter-spacing:.16em;color:#a8dcc4;margin-bottom:2px}
+.draft{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--light);color:var(--ink);padding:8px 14px;border-radius:999px;box-shadow:0 4px 0 #b86e12}
 .hud{display:flex;gap:10px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
-.pill{background:var(--hill);border-radius:12px;padding:6px 12px;font-weight:600}
-.pill b{color:var(--light)}
+.pill{background:var(--paper);color:var(--ink);border-radius:12px;padding:6px 12px;font-weight:700;box-shadow:0 3px 0 #0000002e}
+.pill b{color:var(--ember)}
 .stage{position:relative;width:100%;max-width:560px;margin:0 auto}
-canvas{display:block;width:100%;height:auto;border-radius:18px;background:#081830;touch-action:none}
-.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;background:rgba(8,24,48,.86);border-radius:18px;padding:20px}
+canvas{display:block;width:100%;height:auto;border-radius:22px;background:#17302f;touch-action:none;border:4px solid var(--wool);box-shadow:0 10px 0 #10211f,0 20px 40px #0006}
+.overlay{position:absolute;inset:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;background:rgba(23,48,47,.88);backdrop-filter:blur(3px);border-radius:18px;padding:20px}
 .overlay h2{font-family:var(--display);font-weight:400;letter-spacing:1px;text-transform:uppercase;font-size:44px;margin:0;color:var(--light);line-height:.95}
 .overlay p{margin:0;max-width:34ch;line-height:1.45}
-.btn{font:700 18px var(--body);border:0;border-radius:16px;padding:12px 22px;background:var(--light);color:var(--ink);cursor:pointer}
+.btn{font:700 20px var(--body);border:0;border-radius:16px;padding:13px 28px;background:var(--light);color:var(--ink);cursor:pointer;box-shadow:0 5px 0 #b86e12}.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #b86e12}
 .btn:focus-visible,.pad button:focus-visible{outline:3px solid var(--hedge);outline-offset:2px}
 .pad{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,56px);gap:8px;justify-content:center}
-.pad button{border:0;border-radius:14px;background:var(--hill);color:var(--wool);font:700 22px var(--body);cursor:pointer}
+.pad button{border:0;border-radius:16px;background:var(--paper);color:var(--ink);font:700 22px var(--body);cursor:pointer;box-shadow:0 5px 0 #0000004d}.pad button:active{transform:translateY(3px);box-shadow:0 2px 0 #0000004d}
 .pad .up{grid-column:2}.pad .left{grid-column:1;grid-row:2}.pad .down{grid-column:2;grid-row:2}.pad .right{grid-column:3;grid-row:2}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:#b8c6db}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:#cfe0dc}
 .legend span{display:flex;align-items:center;gap:6px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--light)}
-.lamp{width:14px;height:14px;border-radius:50%;background:var(--ember);box-shadow:0 0 8px var(--light)}
+.lamp{width:14px;height:14px;border-radius:50%;background:var(--ember);box-shadow:0 0 10px var(--light)}
 .sw{width:14px;height:14px;border-radius:50%;background:var(--wool)}
 .wf{width:14px;height:14px;border-radius:4px;background:var(--wolf)}
 .note{font-size:14px;color:#b8c6db;line-height:1.5;max-width:65ch}
 </style>
 
 <div class="wrap">
-  <header><h1>Lost Sheep Dash</h1><span class="draft" id="best">Best 0</span></header>
+  <header><div><span class="kicker">FAVOR KIDS ARCADE</span><h1>Lost Sheep Dash</h1></div><span class="draft" id="best">Best 0</span></header>
   <div class="hud"><span class="pill">Score <b id="score">0</b></span><span class="pill">Sheep found <b id="sheep">0</b>/3</span><span class="pill">Lives <b id="lives">3</b></span><span class="pill">Level <b id="level">1</b></span></div>
   <div class="stage">
     <canvas id="c" width="546" height="598" aria-label="Maze game: guide the shepherd to collect light and find lost sheep"></canvas>
@@ -145,32 +146,57 @@ function tick(now){
 function caught(){lives--;hud();running=false;Snd.bad();buzz([60,40,60]);saveBest();
   if(lives<=0){show('Oh no!',`The wolves got you this time. You found ${found} sheep and scored ${score}. The Good Shepherd never gives up — try again!`,'Play again',()=>{score=0;lives=3;level=1;reset(true);go()})}
   else show('Watch out!','A wolf caught you. Keep going, the sheep are still waiting.','Keep going',()=>{const keep=grid;const d=dots;const sh=sheep;const f=found;reset(false);grid=keep;dots=d;sheep=sh;found=f;hud();go()})}
-function win(){running=false;const bonus=found*100;score+=bonus;hud();Snd.win();confetti(found===3?160:80);saveBest();
+function win(){running=false;if(found===3)try{parent!==window&&parent.postMessage({rmb:'award',key:'sheep3'},'*')}catch{};const bonus=found*100;score+=bonus;hud();Snd.win();confetti(found===3?160:80);saveBest();
   show(found===3?'All sheep home!':'Maze cleared!',found===3?`“Rejoice with me; I have found my lost sheep.” Luke 15:6. Bonus +${bonus}!`:`You cleared the light but ${3-found} sheep are still lost. Bonus +${bonus}.`,'Next level',()=>{level++;reset(true);go()})}
 const ov=document.getElementById('ov');
 function show(h,p,b,fn){ov.hidden=false;ov.innerHTML=`<h2>${h}</h2><p>${p}</p><button class="btn" id="ovb">${b}</button>`;const btn=document.getElementById('ovb');btn.onclick=fn;btn.focus()}
 function go(){ov.hidden=true;running=true;last=performance.now();requestAnimationFrame(tick)}
+// Static pasture (grass texture + stars) drawn once, then the moving parts on top each frame
+const bgc=document.createElement('canvas');bgc.width=cv.width;bgc.height=cv.height;
+(()=>{const b=bgc.getContext('2d');b.setTransform(DPR,0,0,DPR,0,0);const gr=b.createRadialGradient(CW/2,CH2*.45,40,CW/2,CH2/2,CW*.8);gr.addColorStop(0,'#2a4f4c');gr.addColorStop(1,'#152c2b');b.fillStyle=gr;b.fillRect(0,0,CW,CH2);
+ let seed=7;const r=()=>(seed=(seed*9301+49297)%233280)/233280;
+ for(let i=0;i<260;i++){b.strokeStyle=`rgba(168,220,196,${.05+r()*.08})`;b.lineWidth=1;const x=r()*CW,y=r()*CH2;b.beginPath();b.moveTo(x,y);b.lineTo(x+(r()-.5)*3,y-3-r()*4);b.stroke()}
+ for(let i=0;i<40;i++){b.fillStyle=`rgba(251,232,202,${.15+r()*.35})`;b.beginPath();b.arc(r()*CW,r()*CH2,r()*1.3+.3,0,7);b.fill()}})();
+function hedge(X,Y){const gr=g.createLinearGradient(0,Y,0,Y+T);gr.addColorStop(0,'#7fa59b');gr.addColorStop(1,'#466f66');g.fillStyle='#2f4f49';rr(X+1,Y+3,T-2,T-2,8);g.fillStyle=gr;rr(X+1,Y+1,T-2,T-4,8);g.fillStyle='rgba(255,255,255,.18)';rr(X+5,Y+4,T-12,4,2)}
 function draw(){
-  g.fillStyle='#081830';g.fillRect(0,0,CW,CH2);
+  const now=performance.now();
+  g.drawImage(bgc,0,0,CW,CH2);
   for(let y=0;y<R;y++)for(let x=0;x<C;x++){const ch=grid[y][x],X=x*T,Y=y*T;
-    if(ch==='#'){g.fillStyle='#1f6b46';rr(X+2,Y+2,T-4,T-4,7);g.fillStyle='#2f8f5b';rr(X+4,Y+3,T-8,T-10,6)}
-    if(ch==='-'){g.fillStyle='#7a4a2b';g.fillRect(X,Y+T/2-3,T,6)}
-    if(ch==='.'){g.fillStyle='#ffe27a';g.beginPath();g.arc(X+T/2,Y+T/2,3.2,0,7);g.fill()}
-    if(ch==='o'){const p=6+Math.sin(performance.now()/180)*1.5;g.fillStyle='rgba(255,226,122,.25)';g.beginPath();g.arc(X+T/2,Y+T/2,p+6,0,7);g.fill();g.fillStyle='#f95600';g.beginPath();g.arc(X+T/2,Y+T/2,p,0,7);g.fill();g.fillStyle='#ffe27a';g.beginPath();g.arc(X+T/2,Y+T/2-2,3,0,7);g.fill()}}
-  sheep.forEach(s=>{if(s.got)return;drawSheep(s.x*T+T/2,s.y*T+T/2)});
+    if(ch==='#')hedge(X,Y);
+    if(ch==='-'){g.fillStyle='#7a4a2b';g.fillRect(X,Y+T/2-4,T,8);g.fillStyle='#b8763f';g.fillRect(X,Y+T/2-4,T,3)}
+    if(ch==='.'){const tw=.75+Math.sin(now/300+x*1.7+y)*.25;g.fillStyle=`rgba(250,167,49,${.22*tw})`;g.beginPath();g.arc(X+T/2,Y+T/2,7,0,7);g.fill();g.fillStyle='#ffd98a';g.beginPath();g.arc(X+T/2,Y+T/2,3.3,0,7);g.fill()}
+    if(ch==='o')drawLamp(X+T/2,Y+T/2,now)}
+  sheep.forEach(s=>{if(s.got)return;drawSheep(s.x*T+T/2,s.y*T+T/2,now)});
   wolves.forEach(w=>drawWolf(w.px*T+T/2,w.py*T+T/2,w));
   drawShepherd(player.px*T+T/2,player.py*T+T/2);
-  if(scared>0){g.fillStyle='rgba(255,226,122,.9)';g.font='600 14px Fredoka, sans-serif';g.fillText('Lamp! '+Math.ceil(scared)+'s',8,CH2-8)}
+  if(scared>0){g.fillStyle='rgba(23,48,47,.8)';rr(6,CH2-30,96,24,10);g.fillStyle='#faa731';g.font='700 15px FavorSans, sans-serif';g.fillText('🪔 Lamp! '+Math.ceil(scared)+'s',14,CH2-13)}
 }
 function rr(x,y,w,h,r){g.beginPath();g.roundRect?g.roundRect(x,y,w,h,r):g.rect(x,y,w,h);g.fill()}
-function drawSheep(x,y){g.fillStyle='#f5f1e8';[[-5,-2],[5,-2],[0,-6],[-3,4],[4,4]].forEach(([a,b])=>{g.beginPath();g.arc(x+a,y+b,6,0,7);g.fill()});g.fillStyle='#333';g.beginPath();g.ellipse(x+9,y-1,4,5,0,0,7);g.fill()}
-function drawWolf(x,y,w){const sc=scared>0&&!w.leaving;g.fillStyle=sc?'#8fb3ff':w.c;
-  g.beginPath();g.moveTo(x-9,y-4);g.lineTo(x-6,y-12);g.lineTo(x-2,y-6);g.lineTo(x+2,y-6);g.lineTo(x+6,y-12);g.lineTo(x+9,y-4);g.lineTo(x+9,y+6);g.quadraticCurveTo(x,y+12,x-9,y+6);g.closePath();g.fill();
-  g.fillStyle=sc?'#1d3b7a':'#fff';g.beginPath();g.arc(x-4,y-1,2.4,0,7);g.arc(x+4,y-1,2.4,0,7);g.fill();g.fillStyle='#222';g.beginPath();g.arc(x,y+5,2,0,7);g.fill()}
-function drawShepherd(x,y){g.fillStyle='rgba(255,226,122,.18)';g.beginPath();g.arc(x,y,16,0,7);g.fill();
-  g.fillStyle='#c98a4b';g.beginPath();g.arc(x,y+2,9,0,7);g.fill();g.fillStyle='#f3c9a5';g.beginPath();g.arc(x,y-5,6,0,7);g.fill();
-  g.fillStyle='#e8e0cf';g.beginPath();g.arc(x,y-8,6.5,Math.PI,0);g.fill();
-  g.strokeStyle='#7a4a2b';g.lineWidth=2.5;g.beginPath();g.moveTo(x+11,y+10);g.lineTo(x+11,y-8);g.arc(x+7,y-8,4,0,Math.PI,true);g.stroke()}
+function drawLamp(x,y,now){const p=1+Math.sin(now/180)*.12;const gl=g.createRadialGradient(x,y,2,x,y,16*p);gl.addColorStop(0,'rgba(250,167,49,.55)');gl.addColorStop(1,'rgba(250,167,49,0)');g.fillStyle=gl;g.beginPath();g.arc(x,y,16*p,0,7);g.fill();
+  g.fillStyle='#c86354';g.beginPath();g.ellipse(x,y+3,8,4.5,0,0,7);g.fill();g.fillStyle='#e07a69';g.beginPath();g.ellipse(x-1,y+2,5,2,0,0,7);g.fill();
+  g.fillStyle='#ffd98a';g.beginPath();g.moveTo(x+6,y);g.quadraticCurveTo(x+12*p,y-9*p,x+8,y-12*p);g.quadraticCurveTo(x+4,y-6,x+6,y);g.fill()}
+function drawSheep(x,y,now){const bob=Math.sin(now/260+x)*1.2;y+=bob;g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(x,y+10-bob,10,3,0,0,7);g.fill();
+  g.fillStyle='#3d4b4a';g.fillRect(x-5,y+4,2.5,6);g.fillRect(x+3,y+4,2.5,6);
+  [[-5,-1],[5,-1],[0,-6],[-3,4],[4,4],[0,1]].forEach(([a,b],i)=>{g.fillStyle=i===2?'#ffffff':'#fbf4e6';g.beginPath();g.arc(x+a,y+b,6,0,7);g.fill()});
+  g.fillStyle='rgba(255,255,255,.9)';g.beginPath();g.arc(x-2,y-7,2.4,0,7);g.fill();
+  g.fillStyle='#3d4b4a';g.beginPath();g.ellipse(x+9,y-1,4.2,5.2,0,0,7);g.fill();g.fillStyle='#fff';g.beginPath();g.arc(x+10,y-2,1.3,0,7);g.fill()}
+function drawWolf(x,y,w){const sc=scared>0&&!w.leaving;const body=sc?'#a28fbc':w.c;
+  g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(x,y+10,9,3,0,0,7);g.fill();
+  g.fillStyle=body;g.beginPath();g.moveTo(x-9,y-4);g.lineTo(x-7,y-13);g.lineTo(x-2,y-6);g.lineTo(x+2,y-6);g.lineTo(x+7,y-13);g.lineTo(x+9,y-4);g.lineTo(x+9,y+6);g.quadraticCurveTo(x,y+12,x-9,y+6);g.closePath();g.fill();
+  g.fillStyle='rgba(255,255,255,.22)';g.beginPath();g.moveTo(x-6,y-9);g.lineTo(x-4,y-6);g.lineTo(x-7,y-5);g.fill();
+  g.fillStyle=sc?'#ece6f5':'#e9e4da';g.beginPath();g.ellipse(x,y+4,5,4,0,0,7);g.fill();
+  g.fillStyle=sc?'#29464a':'#fff';g.beginPath();g.arc(x-4,y-1,2.6,0,7);g.arc(x+4,y-1,2.6,0,7);g.fill();
+  if(!sc){g.fillStyle='#29464a';g.beginPath();g.arc(x-3.6,y-.6,1.2,0,7);g.arc(x+4.4,y-.6,1.2,0,7);g.fill()}
+  g.fillStyle='#222';g.beginPath();g.arc(x,y+3,1.8,0,7);g.fill()}
+function drawShepherd(x,y){const gl=g.createRadialGradient(x,y,3,x,y,20);gl.addColorStop(0,'rgba(250,167,49,.35)');gl.addColorStop(1,'rgba(250,167,49,0)');g.fillStyle=gl;g.beginPath();g.arc(x,y,20,0,7);g.fill();
+  g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(x,y+11,9,3,0,0,7);g.fill();
+  g.fillStyle='#c86354';g.beginPath();g.moveTo(x-9,y+10);g.quadraticCurveTo(x-8,y-2,x,y-2);g.quadraticCurveTo(x+8,y-2,x+9,y+10);g.closePath();g.fill();
+  g.fillStyle='#faa731';g.fillRect(x-8,y+3,16,2.5);
+  g.fillStyle='#f3c9a5';g.beginPath();g.arc(x,y-6,6,0,7);g.fill();
+  g.fillStyle='#fbe8ca';g.beginPath();g.arc(x,y-8,6.8,Math.PI,0);g.fill();g.fillRect(x-7,y-9,2.5,8);g.fillRect(x+4.5,y-9,2.5,8);
+  g.fillStyle='#59877d';g.fillRect(x-7,y-10,14,2.2);
+  g.fillStyle='#29464a';g.beginPath();g.arc(x-2,y-5,1,0,7);g.arc(x+2,y-5,1,0,7);g.fill();
+  g.strokeStyle='#7a4a2b';g.lineWidth=2.6;g.lineCap='round';g.beginPath();g.moveTo(x+11,y+10);g.lineTo(x+11,y-8);g.arc(x+7,y-8,4,0,Math.PI,true);g.stroke()}
 // controls
 const KEYS={ArrowUp:[0,-1],KeyW:[0,-1],ArrowDown:[0,1],KeyS:[0,1],ArrowLeft:[-1,0],KeyA:[-1,0],ArrowRight:[1,0],KeyD:[1,0]};
 addEventListener('keydown',e=>{if(KEYS[e.code]){want=KEYS[e.code];e.preventDefault()}});

@@ -3,66 +3,78 @@
 <style>
 @font-face{font-family:FavorSans;src:url('/favor-sans-bold.otf')}@font-face{font-family:Agharti;src:url('/agharti-bold.ttf')}
 [hidden]{display:none!important}
-/* Layout: one-screen toy shop — order ticket on top, cake conveyor in the middle, chunky machine buttons below */
+/* Favor Kids brand: cream paper, coral, gold, sage green, lavender, deep teal ink */
 :root{
-  --plum:#3b1361; --grape:#6d2fb3; --lilac:#c9a7f5; --cream:#fff7ec; --sun:#fbc92c; --mint:#5fd3a6; --ink:#1d0a33; --tomato:#f95600;
+  --bg:#fbe8ca; --paper:#fff8eb; --coral:#c86354; --coral2:#ad5246; --gold:#faa731; --gold2:#d9861a; --green:#59877d; --green2:#466f66;
+  --lav:#a28fbc; --ink:#29464a; --teal:#315b5a; --muted:#6e7775; --line:#ecd4b7;
   --display:Agharti,Impact,sans-serif; --body:FavorSans,'Trebuchet MS',system-ui,sans-serif;
-  color-scheme:dark;
+  color-scheme:light;
 }
 html,body{height:100%}
-body{background:var(--plum);color:var(--cream);font-family:var(--body);margin:0;overflow-x:hidden}
+body{margin:0;overflow-x:hidden;color:var(--ink);font-family:var(--body);
+  background:radial-gradient(circle at 15% -10%,#fff3dc 0,transparent 45%),radial-gradient(circle at 110% 20%,#f6d7ae 0,transparent 40%),var(--bg)}
 .wrap{max-width:980px;margin:0 auto;padding-block:16px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-h1{font-family:var(--display);font-weight:400;letter-spacing:1px;text-transform:uppercase;font-size:clamp(34px,6vw,56px);line-height:.9;margin:0;color:var(--sun);text-wrap:balance}
-.draft{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;background:var(--grape);padding:6px 12px;border-radius:999px}
+.kicker{display:block;font:700 12px var(--body);letter-spacing:.16em;color:var(--coral);margin-bottom:2px}
+h1{font-family:var(--display);font-weight:400;letter-spacing:1px;text-transform:uppercase;font-size:clamp(38px,6.5vw,62px);line-height:.88;margin:0;color:var(--coral);text-shadow:0 3px 0 #f2c48f}
+.draft{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--green);color:#fff;padding:8px 14px;border-radius:999px;box-shadow:0 4px 0 var(--green2)}
 .tabs{display:flex;gap:8px;flex-wrap:wrap}
-.tabs button{font:600 16px var(--body);border:0;border-radius:14px;padding:10px 16px;background:var(--grape);color:var(--cream);cursor:pointer}
-.tabs button[aria-selected="true"]{background:var(--sun);color:var(--ink)}
-.tabs button:disabled{opacity:.45;cursor:default}
-button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
+.tabs button{font:700 16px var(--body);border:0;border-radius:14px;padding:10px 16px;background:var(--paper);color:var(--teal);cursor:pointer;box-shadow:0 4px 0 var(--line)}
+.tabs button[aria-selected="true"]{background:var(--gold);color:var(--ink);box-shadow:0 4px 0 var(--gold2)}
+.tabs button:disabled{opacity:.5;cursor:default}
+button:focus-visible{outline:3px solid var(--green);outline-offset:2px}
 .hud{display:flex;gap:10px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
-.pill{background:rgba(255,255,255,.1);border-radius:12px;padding:6px 12px;font-weight:600}
-.pill b{color:var(--sun)}
-.order{display:flex;gap:16px;align-items:center;background:var(--cream);color:var(--ink);border-radius:22px;padding:14px 18px;flex-wrap:wrap}
+.pill{background:var(--paper);border:2px solid var(--line);border-radius:12px;padding:6px 12px;font-weight:700;color:var(--teal)}
+.pill b{color:var(--coral)}
+.order{display:flex;gap:16px;align-items:center;background:var(--paper);color:var(--ink);border-radius:24px;padding:14px 18px;flex-wrap:wrap;border:3px solid #fff;box-shadow:0 8px 0 var(--line),0 16px 30px #59463e1f;position:relative}
+.order:before{content:'';position:absolute;left:18px;right:18px;top:-3px;height:8px;background:repeating-linear-gradient(90deg,var(--coral) 0 14px,transparent 14px 22px);border-radius:0 0 6px 6px;opacity:.85}
 .order .who{flex:1;min-width:200px}
-.order .who small{display:block;font-weight:600;color:var(--grape);text-transform:uppercase;letter-spacing:.08em;font-size:12px}
-.order .who strong{font-size:22px;display:block;margin:2px 0}
-.order .who span{font-size:15px}
-.ticket{width:120px;height:110px;flex:none;background:#f1e6ff;border-radius:16px;display:flex;align-items:center;justify-content:center}
-.belt{position:relative;height:230px;background:linear-gradient(var(--grape),#5a2596);border-radius:26px;overflow:hidden}
+.order .who small{display:block;font-weight:700;color:var(--coral);text-transform:uppercase;letter-spacing:.12em;font-size:12px}
+.order .who strong{font-family:var(--display);font-weight:400;font-size:32px;line-height:1;display:block;margin:4px 0;color:var(--teal);letter-spacing:.5px}
+.order .who span{font-size:15px;color:var(--muted)}
+.ticket{width:124px;height:114px;flex:none;background:linear-gradient(#fdf1de,#f7e0bb);border-radius:18px;display:flex;align-items:center;justify-content:center;border:2px dashed #e2c69f}
+.belt{position:relative;height:240px;border-radius:26px;overflow:hidden;border:3px solid #fff;box-shadow:0 8px 0 var(--line),inset 0 -30px 40px #0000000f;
+  background:radial-gradient(circle at 20% 10%,#ffffff55 0,transparent 35%),linear-gradient(#7fa59b,#59877d 55%,#4c7a70)}
+.belt:before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,#ffffff0d 0 2px,transparent 2px 28px)}
 .stations{position:absolute;inset:12px 12px auto;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.st{background:rgba(255,255,255,.12);border-radius:12px;text-align:center;font-weight:600;font-size:14px;padding:6px 4px}
-.st.on{background:var(--sun);color:var(--ink)}
-.rail{position:absolute;left:0;right:0;bottom:26px;height:18px;background:repeating-linear-gradient(90deg,#2a0d47 0 18px,#43186e 18px 36px);animation:roll 1s linear infinite}
+.st{background:#ffffff26;color:#fff;border-radius:12px;text-align:center;font-weight:700;font-size:14px;padding:7px 4px;border:2px solid #ffffff33}
+.st.on{background:var(--gold);color:var(--ink);border-color:#fff;box-shadow:0 4px 0 var(--gold2)}
+.rail{position:absolute;left:0;right:0;bottom:22px;height:22px;border-top:4px solid #2d4f4a;background:repeating-linear-gradient(90deg,#355f58 0 18px,#294a45 18px 36px);box-shadow:0 6px 0 #1f3a36;animation:roll 1s linear infinite}
 @keyframes roll{to{background-position:36px 0}}
 @media (prefers-reduced-motion:reduce){.rail{animation:none}.cake{transition:none!important}}
-.cake{position:absolute;bottom:40px;width:150px;height:140px;transition:left .7s cubic-bezier(.5,0,.3,1)}
-.machine{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
-.opt{font:600 17px var(--body);border:0;border-radius:18px;padding:12px 10px;background:var(--cream);color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 6px 0 #a78bd0;transition:transform .08s}
-.opt:active{transform:translateY(4px);box-shadow:0 2px 0 #a78bd0}
-.opt svg{width:88px;height:70px}
-.step-title{font-family:var(--display);font-weight:400;letter-spacing:1px;font-size:28px;text-transform:uppercase;margin:4px 0 0}
-.toast{min-height:52px;border-radius:16px;padding:12px 16px;font-size:17px;font-weight:600;background:rgba(255,255,255,.08)}
-.toast.good{background:var(--mint);color:var(--ink)}
-.toast.bad{background:var(--tomato);color:#fff}
-.timer{height:12px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden}.timer span{display:block;height:100%;width:100%;background:var(--mint);transition:width .2s linear}
-.next{font:700 18px var(--body);border:0;border-radius:16px;padding:12px 20px;background:var(--sun);color:var(--ink);cursor:pointer}
+.cake{position:absolute;bottom:40px;width:150px;height:140px;transition:left .7s cubic-bezier(.5,0,.3,1);filter:drop-shadow(0 8px 6px #0000002e)}
+.machine{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.opt{font:700 17px var(--body);border:3px solid #fff;border-radius:20px;padding:12px 10px;background:var(--paper);color:var(--teal);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 7px 0 var(--line);transition:transform .08s}
+.opt:hover{border-color:var(--gold)}
+.opt:active{transform:translateY(5px);box-shadow:0 2px 0 var(--line)}
+.opt svg{width:96px;height:78px;filter:drop-shadow(0 4px 3px #0000001f)}
+.step-title{font-family:var(--display);font-weight:400;letter-spacing:1px;font-size:32px;text-transform:uppercase;margin:4px 0 0;color:var(--teal)}
+.toast{min-height:52px;border-radius:16px;padding:12px 16px;font-size:17px;font-weight:700;background:var(--paper);border:2px solid var(--line);color:var(--teal)}
+.toast.good{background:var(--green);border-color:var(--green);color:#fff}
+.toast.bad{background:var(--coral);border-color:var(--coral);color:#fff}
+.timer{height:14px;border-radius:999px;background:#e9d2b2;overflow:hidden;border:2px solid #fff}.timer span{display:block;height:100%;width:100%;background:var(--green);transition:width .2s linear}
+.next{font:700 18px var(--body);border:0;border-radius:16px;padding:12px 20px;background:var(--gold);color:var(--ink);cursor:pointer;box-shadow:0 5px 0 var(--gold2)}
+.next:active{transform:translateY(3px);box-shadow:0 2px 0 var(--gold2)}
 /* pairs */
-.board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:560px;width:100%;margin:0 auto}
-.card{aspect-ratio:1;max-width:100%;border:0;border-radius:18px;background:var(--grape);cursor:pointer;display:flex;align-items:center;justify-content:center;font:700 15px var(--body);color:var(--ink);padding:6px;text-align:center}
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:560px;width:100%;margin:0 auto;perspective:800px}
+.card{aspect-ratio:1;max-width:100%;border:3px solid #fff;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font:700 15px var(--body);color:var(--teal);padding:6px;text-align:center;box-shadow:0 6px 0 var(--coral2);transition:transform .25s;
+  background:radial-gradient(circle at 30% 25%,#ffffff40 0,transparent 40%),repeating-linear-gradient(45deg,#c86354 0 10px,#bf5a4b 10px 20px)}
+.card:hover{transform:translateY(-2px)}
 .card .face{display:none;flex-direction:column;align-items:center;gap:4px}
-.card.up,.card.done{background:var(--cream)}
+.card.up,.card.done{background:var(--paper);box-shadow:0 6px 0 var(--line);transform:rotateY(0)}
+.card.up{animation:flip .25s ease}
+@keyframes flip{from{transform:rotateY(90deg)}to{transform:rotateY(0)}}
 .card.up .face,.card.done .face{display:flex}
-.card.done{opacity:.55}
-.card .back{width:40%;aspect-ratio:1;border-radius:50%;background:var(--lilac);opacity:.6}
+.card.done{opacity:.6;border-color:var(--green)}
+.card .back{width:46%;aspect-ratio:1;border-radius:50%;background:url('/favor-kids-logo.webp') center/80% no-repeat,#fbe8ca;border:3px solid #fff;box-shadow:0 3px 0 #0000001f}
 .card.up .back,.card.done .back{display:none}
-.card svg{width:70%;height:auto}
-.note{font-size:14px;color:var(--lilac);line-height:1.5;max-width:65ch}
+.card svg{width:74%;height:auto;filter:drop-shadow(0 3px 2px #0000001f)}
+.note{font-size:14px;color:var(--muted);line-height:1.5;max-width:65ch}
 </style>
 
 <div class="wrap">
   <header>
-    <h1>Favor Bakery</h1>
+    <div><span class="kicker">FAVOR KIDS ARCADE</span><h1>Favor Bakery</h1></div>
     <span class="draft" id="lvl">Level 1 · Baker</span>
   </header>
   <div class="tabs" role="tablist">
@@ -110,8 +122,8 @@ const Q=new URLSearchParams(location.search),CH=Math.max(1,Math.min(28,Number(Q.
 function confetti(n=120){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const c=document.createElement('canvas'),d=Math.min(2,devicePixelRatio||1);c.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:9';document.body.append(c);const w=c.width=innerWidth*d,h=c.height=innerHeight*d,x=c.getContext('2d'),cols=['#faa731','#c86354','#59877d','#a28fbc','#fbe8ca','#ffe25a'];const ps=Array.from({length:n},()=>({x:w/2+(Math.random()-.5)*w*.3,y:h*.4,vx:(Math.random()-.5)*26*d,vy:(-Math.random()*22-8)*d,r:(4+Math.random()*6)*d,a:Math.random()*6,va:(Math.random()-.5)*.4,c:cols[Math.floor(Math.random()*6)]}));let t=0;const k=()=>{x.clearRect(0,0,w,h);t++;ps.forEach(p=>{p.vy+=.7*d;p.vx*=.985;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillStyle=p.c;x.fillRect(-p.r,-p.r/2,p.r*2,p.r);x.restore()});if(t<140)requestAnimationFrame(k);else c.remove()};k()}
 
 const $=id=>document.getElementById(id);
-const SHAPES=['round','square','heart'], BATTERS={vanilla:'#f6dca6',chocolate:'#7a4a2b',strawberry:'#f59bb5'},
- FROST={white:'#ffffff',lilac:'#c9a7f5',mint:'#9fe8c8'}, TOPS=['cherry','star','candle'];
+const SHAPES=['round','square','heart'], BATTERS={vanilla:'#f7d99c',chocolate:'#7a4a2b',strawberry:'#f39aae'},
+ FROST={white:'#fffaf2',lilac:'#cbb8e6',mint:'#a8dcc4'}, TOPS=['cherry','star','candle'];
 const CUSTOMERS=[
  ['Noah','is celebrating that the rain finally stopped! (Genesis 8)'],
  ['Mary & Martha','are having Jesus over for dinner. (Luke 10)'],
@@ -121,8 +133,9 @@ const CUSTOMERS=[
  ['The wedding at Cana','needs a cake to go with the new wine! (John 2)'],
  ['Hannah','is thanking God for baby Samuel. (1 Samuel 1)']];
 function cakeSVG(c,scale=1){
-  if(!c.shape) return `<rect x="20" y="118" width="110" height="10" rx="5" fill="#ece2fa"/>`;
-  const b=BATTERS[c.batter]||'#e9ddf7', f=c.frost?FROST[c.frost]:null;
+  const plate=`<ellipse cx="75" cy="124" rx="64" ry="9" fill="#00000014"/><ellipse cx="75" cy="120" rx="62" ry="8" fill="#ffffff"/><ellipse cx="75" cy="119" rx="50" ry="5" fill="#f3e7d6"/>`;
+  if(!c.shape) return plate;
+  const b=BATTERS[c.batter]||'#f1ddbd', f=c.frost?FROST[c.frost]:null;
   let body='';
   if(c.shape==='round') body=`<ellipse cx="75" cy="112" rx="55" ry="14" fill="${shade(b)}"/><rect x="20" y="62" width="110" height="50" fill="${b}"/><ellipse cx="75" cy="62" rx="55" ry="14" fill="${f||lighten(b)}"/>${f?`<path d="M20 62 q8 16 16 0 q8 16 16 0 q8 16 16 0 q8 16 16 0 q8 16 16 0 q8 16 16 0 q7 14 14 0" fill="${f}"/>`:''}`;
   if(c.shape==='square') body=`<rect x="22" y="58" width="106" height="60" rx="6" fill="${b}"/><rect x="22" y="58" width="106" height="${f?16:6}" rx="6" fill="${f||lighten(b)}"/>${f?`<path d="M22 72 q9 14 18 0 q9 14 18 0 q9 14 18 0 q9 14 18 0 q9 14 18 0 q8 12 16 0" fill="${f}"/>`:''}`;
@@ -130,9 +143,11 @@ function cakeSVG(c,scale=1){
   let top='';
   const ty=c.shape==='heart'?54:c.shape==='square'?52:46;
   if(c.top==='cherry') top=`<path d="M75 ${ty-10} q6 -14 14 -16" stroke="#3b7a2a" stroke-width="3" fill="none"/><circle cx="75" cy="${ty}" r="10" fill="#e3263b"/><circle cx="71" cy="${ty-3}" r="3" fill="#fff" opacity=".7"/>`;
-  if(c.top==='star') top=`<polygon points="75,${ty-16} 80,${ty-4} 93,${ty-4} 83,${ty+4} 87,${ty+16} 75,${ty+8} 63,${ty+16} 67,${ty+4} 57,${ty-4} 70,${ty-4}" fill="#fbc92c" stroke="#d69a00" stroke-width="2"/>`;
-  if(c.top==='candle') top=`<rect x="70" y="${ty-26}" width="10" height="28" rx="3" fill="#7fb6ff"/><path d="M75 ${ty-40} q8 8 0 14 q-8 -6 0 -14Z" fill="#ff9a1f"/>`;
-  return `<rect x="16" y="118" width="118" height="10" rx="5" fill="#ece2fa"/>${body}${top}`;
+  if(c.top==='star') top=`<polygon points="75,${ty-16} 80,${ty-4} 93,${ty-4} 83,${ty+4} 87,${ty+16} 75,${ty+8} 63,${ty+16} 67,${ty+4} 57,${ty-4} 70,${ty-4}" fill="#faa731" stroke="#d9861a" stroke-width="2"/>`;
+  if(c.top==='candle') top=`<rect x="70" y="${ty-26}" width="10" height="28" rx="3" fill="#a28fbc"/><rect x="70" y="${ty-20}" width="10" height="4" fill="#fff" opacity=".6"/><rect x="70" y="${ty-10}" width="10" height="4" fill="#fff" opacity=".6"/><path d="M75 ${ty-40} q8 8 0 14 q-8 -6 0 -14Z" fill="#ff9a1f"/>`;
+  const gloss=c.shape==='heart'?`<path d="M44 64 C48 58 56 57 61 62" stroke="#fff" stroke-opacity=".55" stroke-width="5" stroke-linecap="round" fill="none"/>`:`<rect x="${c.shape==='round'?28:30}" y="${c.shape==='round'?78:80}" width="7" height="${c.shape==='round'?26:28}" rx="3.5" fill="#fff" opacity=".28"/>`;
+  const spr=f?[[52,60,'#c86354'],[66,57,'#faa731'],[86,59,'#59877d'],[98,61,'#a28fbc'],[60,64,'#faa731'],[92,65,'#c86354']].map(([x,y,col],i)=>`<rect x="${x}" y="${c.shape==='heart'?y+12:c.shape==='square'?y+4:y}" width="7" height="2.6" rx="1.3" fill="${col}" transform="rotate(${i*37%80-40} ${x} ${y})"/>`).join(''):'';
+  return `${plate}${body}${gloss}${spr}${top}`;
 }
 function shade(h){return mix(h,'#000000',.18)} function lighten(h){return mix(h,'#ffffff',.25)}
 function mix(a,b,t){const p=x=>[1,3,5].map(i=>parseInt(x.slice(i,i+2),16));const A=p(a),B=p(b);return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('')}
@@ -146,7 +161,7 @@ function newOrder(){
   let pick=rnd(CUSTOMERS);if(firstOrder){firstOrder=false;const near=Object.keys(CH_ORDER).map(Number).filter(n=>n<=CH).pop();if(near)pick=CH_ORDER[near]}
   const [w,y]=pick; $('who').textContent=w; $('why').textContent=y;
   level=1+Math.floor(stats.made/3);$('lvl').textContent=`Level ${level} · ${['Baker','Head Baker','Master Baker','Royal Baker'][Math.min(3,level-1)]}`;
-  clearInterval(timer);$('timerWrap').hidden=level<2;if(level>=2){const max=Math.max(9,24-level*3);timeLeft=max;$('timerBar').style.width='100%';timer=setInterval(()=>{timeLeft-=.2;$('timerBar').style.width=Math.max(0,timeLeft/max*100)+'%';$('timerBar').style.background=timeLeft<4?'#f95600':'';if(timeLeft<=0){clearInterval(timer);if(step<=3){step=4;render();finish(true)}}},200)}
+  clearInterval(timer);$('timerWrap').hidden=level<2;if(level>=2){const max=Math.max(9,24-level*3);timeLeft=max;$('timerBar').style.width='100%';timer=setInterval(()=>{timeLeft-=.2;$('timerBar').style.width=Math.max(0,timeLeft/max*100)+'%';$('timerBar').style.background=timeLeft<4?'#c86354':'';if(timeLeft<=0){clearInterval(timer);if(step<=3){step=4;render();finish(true)}}},200)}
   $('ticket').innerHTML=`<svg viewBox="0 0 150 140" width="110" height="100">${cakeSVG(order)}</svg>`;
   cake={};step=0;$('next').hidden=true;$('toast').className='toast';$('toast').textContent='Build the same cake as the ticket.';
   render();
@@ -169,6 +184,7 @@ function finish(late){
   const t=$('toast');
   if(late){stats.streak=0;t.className='toast bad';t.textContent='Out of time! The customer is still waiting. Try a faster hand next time.';Snd.bad();buzz([40,50,40])}
   else if(!misses.length){stats.made++;stats.streak++;stats.coins+=10+stats.streak*2+(level>1?Math.ceil(timeLeft):0);t.className='toast good';Snd.win();buzz([15,30,15]);confetti(stats.streak>=3?140:80);
+    try{parent!==window&&parent.postMessage({rmb:'award',key:'cake'},'*')}catch{}
     t.textContent=`Perfect! ${$('who').textContent} loved it. "Taste and see that the Lord is good." Psalm 34:8`;}
   else{stats.streak=0;stats.coins+=3;t.className='toast bad';Snd.bad();buzz([40,50,40]);t.textContent=`So close! Check the ${misses.map(k=>({shape:'shape',batter:'batter',frost:'frosting',top:'topping'})[k]).join(' and ')} next time.`}
   $('made').textContent=stats.made;$('coins').textContent=stats.coins;$('streak').textContent=stats.streak;$('next').hidden=false;
@@ -178,14 +194,14 @@ $('next').onclick=newOrder; addEventListener('resize',render);
 /* pairs */
 const PAIRS=[['Noah’s ark','ark'],['David & Goliath','sling'],['Jonah','whale'],['Baby Moses','basket'],['Jesus feeds 5,000','bread'],['Lost sheep','sheep'],['Star of Bethlehem','star'],['Jesus calms the storm','boat']];
 function icon(k){return({
- ark:'<path d="M10 60 h80 l-12 18 h-56z" fill="#9b5b2e"/><rect x="34" y="38" width="32" height="22" fill="#c98a4b"/><path d="M30 38 l20 -14 l20 14z" fill="#7a4220"/>',
- sling:'<circle cx="62" cy="34" r="10" fill="#9aa0a6"/><path d="M20 80 q20 -40 34 -46" stroke="#7a4a2b" stroke-width="5" fill="none"/>',
- whale:'<path d="M14 56 q30 -34 66 -6 l14 -12 l-4 22 l4 20 l-14 -12 q-36 26 -66 -12z" fill="#3a7bd5"/><circle cx="34" cy="50" r="3" fill="#fff"/>',
- basket:'<path d="M18 52 h64 l-8 24 h-48z" fill="#d6a253"/><circle cx="50" cy="46" r="10" fill="#f3c9a5"/>',
- bread:'<ellipse cx="38" cy="58" rx="22" ry="14" fill="#d99a4e"/><path d="M60 52 l24 -6 l-2 18 l-24 4z" fill="#6aa3c8"/>',
- sheep:'<circle cx="46" cy="52" r="20" fill="#f1f1f1" stroke="#ddd"/><circle cx="70" cy="46" r="10" fill="#444"/>',
- star:'<polygon points="50,14 59,40 86,40 64,56 72,82 50,66 28,82 36,56 14,40 41,40" fill="#fbc92c"/>',
- boat:'<path d="M14 62 h72 l-10 14 h-52z" fill="#7a4a2b"/><path d="M50 20 v40 h-26z" fill="#fff"/><path d="M8 82 q12 -8 24 0 q12 8 24 0 q12 -8 24 0 q12 8 18 2" stroke="#3a7bd5" stroke-width="4" fill="none"/>'
+ ark:'<path d="M6 84 q22 -8 44 0 q22 8 44 0 v10 h-88z" fill="#7fa59b"/><path d="M8 60 h84 l-14 22 h-56z" fill="#9b5b2e"/><path d="M8 60 h84 l-3 5 h-78z" fill="#b8763f"/><rect x="30" y="36" width="40" height="24" rx="3" fill="#d99a4e"/><rect x="36" y="42" width="8" height="8" rx="2" fill="#7a4220"/><rect x="56" y="42" width="8" height="8" rx="2" fill="#7a4220"/><path d="M24 38 l26 -18 l26 18z" fill="#c86354"/><circle cx="76" cy="18" r="8" fill="#faa731"/>',
+ sling:'<circle cx="64" cy="30" r="12" fill="#9aa5a3"/><circle cx="60" cy="26" r="4" fill="#fff" opacity=".5"/><path d="M18 86 q16 -34 34 -46" stroke="#7a4a2b" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M52 40 q8 -12 2 -20" stroke="#c98a4b" stroke-width="4" stroke-linecap="round" fill="none"/>',
+ whale:'<path d="M8 86 q14 -6 28 0 q14 6 28 0 q14 -6 28 0" stroke="#7fa59b" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M12 54 q30 -36 68 -6 l12 -12 l-3 22 l3 20 l-12 -12 q-38 28 -68 -12z" fill="#59877d"/><path d="M14 58 q28 22 62 -2 q-30 14 -62 2z" fill="#a8dcc4"/><circle cx="32" cy="48" r="4" fill="#fff"/><circle cx="33" cy="49" r="2" fill="#29464a"/><path d="M40 26 q-4 -10 -10 -12 M40 26 q2 -10 8 -12" stroke="#a8dcc4" stroke-width="3" fill="none" stroke-linecap="round"/>',
+ basket:'<path d="M4 80 q16 -6 32 0 q16 6 32 0 q16 -6 28 0" stroke="#7fa59b" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M16 50 h68 l-8 26 h-52z" fill="#d6a253"/><path d="M20 56 h60 M22 64 h56 M24 72 h52" stroke="#b07f37" stroke-width="2.5"/><rect x="30" y="42" width="40" height="12" rx="6" fill="#fff8eb"/><circle cx="50" cy="40" r="11" fill="#f3c9a5"/><circle cx="46" cy="40" r="1.6" fill="#29464a"/><circle cx="54" cy="40" r="1.6" fill="#29464a"/>',
+ bread:'<ellipse cx="36" cy="60" rx="24" ry="15" fill="#d99a4e"/><path d="M20 56 q16 -12 32 0" stroke="#f7d99c" stroke-width="3" fill="none"/><ellipse cx="36" cy="52" rx="14" ry="4" fill="#fff" opacity=".25"/><path d="M58 54 q14 -14 30 -2 q-14 14 -30 2z" fill="#a28fbc"/><circle cx="82" cy="52" r="2" fill="#fff"/><path d="M58 54 l-8 -6 v12z" fill="#a28fbc"/>',
+ sheep:'<g fill="#fffaf2" stroke="#e2d6c4" stroke-width="2"><circle cx="34" cy="54" r="14"/><circle cx="50" cy="46" r="15"/><circle cx="56" cy="60" r="14"/><circle cx="40" cy="64" r="12"/></g><ellipse cx="74" cy="50" rx="11" ry="13" fill="#3d4b4a"/><circle cx="78" cy="47" r="2" fill="#fff"/><rect x="38" y="72" width="5" height="12" rx="2" fill="#3d4b4a"/><rect x="54" y="72" width="5" height="12" rx="2" fill="#3d4b4a"/>',
+ star:'<circle cx="50" cy="48" r="34" fill="#faa731" opacity=".2"/><polygon points="50,12 59,38 86,38 64,54 72,80 50,64 28,80 36,54 14,38 41,38" fill="#faa731" stroke="#d9861a" stroke-width="2"/><polygon points="50,24 54,38 46,38" fill="#fff" opacity=".6"/>',
+ boat:'<path d="M50 16 v44 h-30z" fill="#fffaf2" stroke="#e2d6c4" stroke-width="2"/><path d="M54 24 v36 h22z" fill="#faa731"/><rect x="49" y="14" width="4" height="48" fill="#7a4a2b"/><path d="M12 62 h76 l-12 16 h-52z" fill="#9b5b2e"/><path d="M12 62 h76 l-2 4 h-72z" fill="#b8763f"/><path d="M6 84 q12 -8 24 0 q12 8 24 0 q12 -8 24 0 q12 8 18 2" stroke="#59877d" stroke-width="5" fill="none" stroke-linecap="round"/>'
 })[k]}
 let flipped=[],turns=0,found=0,lock=false;
 function deal(){

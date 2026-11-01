@@ -189,8 +189,8 @@ function renderLoadout(p) {
   box.querySelectorAll('[data-loadout]').forEach(b => b.onclick = () => showRewards(b.dataset.loadout));
 }
 function showCongratulations() {
-  const p = profile(), B = curBook(p), left = BOOKS.filter(b => bookDone(p, b.id).length < b.n);
-  openModal(`${header('YOU DID IT', `${B.name} complete!`)}<p>You read all ${B.n} chapters of ${B.name}. What an adventure!${left.length ? ` Now choose your next book: ${left.map(b => b.name).join(', ')}. Your streak, home and outfits come with you!` : ' You finished every book in the game so far. More books are coming!'}</p>${B.id === 'matthew' ? '<div class="notice">Every reading reward is now unlocked for this explorer.</div>' : ''}<button id="congratsDone" class="button primary wide">${left.length ? 'Choose my next book' : 'Keep exploring'}</button>`);
+  const p = profile(), B = curBook(p), left = BOOKS.filter(b => !b.soon && bookDone(p, b.id).length < b.n);
+  openModal(`${header('YOU DID IT', `${B.name} complete!`)}<p>You read all ${B.n} chapters of ${B.name}. What an adventure!${left.length ? ` Now choose your next book: ${left.map(b => b.name).join(', ')}. Your streak, home and outfits come with you!` : ' You finished every book that’s open so far. Luke opens in December!'}</p>${B.id === 'matthew' ? '<div class="notice">Every reading reward is now unlocked for this explorer.</div>' : ''}<button id="congratsDone" class="button primary wide">${left.length ? 'Choose my next book' : 'Keep exploring'}</button>`);
   $('#congratsDone').onclick = () => left.length ? showChapters() : closeModal();
 }
 
@@ -364,13 +364,13 @@ function showTransfer() {
   };
 }
 function showHow() {
-  openModal(`${header('HOW TO PLAY', 'Read • Answer • Fly')}<div class="chapter-row"><b>1. Read every day</b><small>One chapter of Matthew a day, in order. Ages 4–6 read a short passage (and can tap Read more for the whole chapter); ages 7–12 read the whole chapter.</small></div><br><div class="chapter-row"><b>2. Answer three questions</b><small>Get all three right. You can try again as many times as you need.</small></div><br><div class="chapter-row"><b>3. Fly in Sky Run</b><small>Hold to rise, let go to fall. Dodge gears and zappers, catch stars, and grab glowing Bibles to throw pages.</small></div><br><div class="chapter-row"><b>4. Unlock and grow</b><small>Every chapter unlocks a new look. Every 3 chapters fills your home bar — pass the home quiz to move up from tent to trailer, house, and mansion.</small></div><br><div class="chapter-row"><b>5. Keep your streak</b><small>Read every day, weekends too, to keep your fire burning. Miss a day and the streak starts again.</small></div>`);
+  openModal(`${header('HOW TO PLAY', 'Read • Answer • Fly')}<div class="chapter-row"><b>1. Read every day</b><small>One chapter a day, in order (this month: the book of Mark). Ages 4–6 read a short passage (and can tap Read more for the whole chapter); ages 7–12 read the whole chapter.</small></div><br><div class="chapter-row"><b>2. Answer three questions</b><small>Get all three right. You can try again as many times as you need.</small></div><br><div class="chapter-row"><b>3. Fly in Sky Run</b><small>Hold to rise, let go to fall. Dodge gears and zappers, catch stars, and grab glowing Bibles to throw pages.</small></div><br><div class="chapter-row"><b>4. Unlock and grow</b><small>Every chapter unlocks a new look. Every 3 chapters fills your home bar — pass the home quiz to move up from tent to trailer, house, and mansion.</small></div><br><div class="chapter-row"><b>5. Keep your streak</b><small>Read every day, weekends too, to keep your fire burning. Miss a day and the streak starts again.</small></div>`);
 }
 function showChapters() {
   const p = profile(); if (!p) { showProfiles(); return; }
-  const today = todayChapter(p), master = isMaster(), B = curBook(p), open = matthewDone(p) || master;
-  const shelf = `<div class="bk-shelf">${BOOKS.map(b => { const d = bookDone(p, b.id).length, can = b.id === 'matthew' || open; return `<button class="bk-book ${b.id === B.id ? 'on' : ''} ${d >= b.n ? 'done' : ''}" data-book="${b.id}" style="--bk:${b.color}" ${can ? '' : 'disabled'}><b>${b.name}</b><small>${can ? `${d} / ${b.n}${d >= b.n ? ' ✓' : ''}` : '🔒 Finish Matthew'}</small><i>${b.blurb}</i></button>`; }).join('')}</div>`;
-  openModal(`${header('MY READING MAP', `${B.name} 1–${B.n}`)}${shelf}<p>${open ? 'Tap a book to read it next. Your streak, home and outfits come with you.' : 'Finish Matthew to unlock Mark, Luke, John and Acts!'} Finished chapters get a check mark; today’s chapter glows gold.${master ? ' <b>Test mode:</b> tap any chapter to open it.' : ''}</p><div class="chapter-grid">${bookQ(B.id).map((q, i) => { const n = i + 1, done = completed(p, n), isToday = n === today; return `<button class="chapter-tile ${done ? 'done' : ''} ${isToday ? 'today' : ''} ${!done && !isToday ? 'locked' : ''}" data-chapter="${n}" ${master ? '' : 'disabled'}>${B.name.slice(0, 3).toUpperCase()} ${n}<small>${done ? '✓ Read' : isToday ? 'Today' : 'Coming soon'}</small></button>`; }).join('')}</div><button id="viewRewards" class="button secondary wide">See my wardrobe</button>`);
+  const today = todayChapter(p), master = isMaster(), B = curBook(p);
+  const shelf = `<div class="bk-shelf">${BOOKS.map(b => { const d = bookDone(p, b.id).length, can = !b.soon; return `<button class="bk-book ${b.id === B.id ? 'on' : ''} ${d >= b.n ? 'done' : ''}" data-book="${b.id}" style="--bk:${b.color}" ${can ? '' : 'disabled'}><b>${b.name}</b><small>${can ? `${d} / ${b.n}${d >= b.n ? ' ✓' : ''}` : `🔒 ${b.soon}`}</small><i>${b.blurb}</i></button>`; }).join('')}</div>`;
+  openModal(`${header('MY READING MAP', `${B.name} 1–${B.n}`)}${shelf}<p>This month we’re all reading Mark! Tap a book to switch. Your streak, home and outfits come with you. Finished chapters get a check mark; today’s chapter glows gold.${master ? ' <b>Test mode:</b> tap any chapter to open it.' : ''}</p><div class="chapter-grid">${bookQ(B.id).map((q, i) => { const n = i + 1, done = completed(p, n), isToday = n === today; return `<button class="chapter-tile ${done ? 'done' : ''} ${isToday ? 'today' : ''} ${!done && !isToday ? 'locked' : ''}" data-chapter="${n}" ${master ? '' : 'disabled'}>${B.name.slice(0, 3).toUpperCase()} ${n}<small>${done ? '✓ Read' : isToday ? 'Today' : 'Coming soon'}</small></button>`; }).join('')}</div><button id="viewRewards" class="button secondary wide">See my wardrobe</button>`);
   if (master) $('#modalCard').querySelectorAll('[data-chapter]').forEach(b => b.onclick = () => showReading(Number(b.dataset.chapter)));
   $('#modalCard').querySelectorAll('[data-book]').forEach(b => b.onclick = () => { if (b.dataset.book === curBookId(p)) return; p.book = b.dataset.book; p.today = null; save(); SkyAudio.sfx('page'); render(); showChapters(); toast(`Next up: ${bookInfo(p.book).name}!`); });
   $('#viewRewards').onclick = () => showRewards();
@@ -501,18 +501,21 @@ const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[
 const toQuestion = row => ({ prompt: row[0], correct: row[1], answers: shuffle(row.slice(1)) });
 // The bonus reflection is question 4 of the quiz on chapters 3, 6, 9 … 27 and 28 (and in the matching home quiz).
 function quizBonusCh() { if (!quiz || typeof REFLECT === 'undefined' || (quiz.mode !== 'review' && curBookId(profile()) !== 'matthew')) return 0; const ch = quiz.mode === 'review' ? Math.max(...quiz.chapters) : quiz.chapter; return REFLECT[ch] ? ch : 0; }
+// Home quiz chapters can come from any book: Matthew uses REVIEW; other books use one of their own chapter questions.
+const reviewRow = (c, key) => { const [id, n] = typeof c === 'number' ? ['matthew', c] : c; if (id === 'matthew') return REVIEW[n - 1][key]; const rows = bookQ(id)[n - 1][key]; return rows[Math.floor(Math.random() * rows.length)]; };
+const reviewLabel = c => typeof c === 'number' ? `Matthew ${c}` : `${bookInfo(c[0]).name} ${c[1]}`;
 function startQuiz(opts) {
   stopNarration();
   const p = profile(), key = p.age <= 6 ? 'little' : 'big';
-  const rows = opts.mode === 'review' ? opts.chapters.map(n => REVIEW[n - 1][key]) : QUESTIONS[opts.chapter - 1][key];
+  const rows = opts.mode === 'review' ? opts.chapters.map(c => reviewRow(c, key)) : bookQ(curBookId(p))[opts.chapter - 1][key];
   quiz = { ...opts, questions: rows.map(toQuestion), index: 0, score: 0, runId: (quiz?.runId || 0) + 1 };
   renderQuestion();
 }
 function renderQuestion() {
   const q = quiz.questions[quiz.index], shown = quiz.index, runId = quiz.runId;
   quiz.picked = -1; quiz.advancing = false;
-  const title = quiz.mode === 'review' ? 'Home quiz' : `Matthew ${quiz.chapter}`;
-  openModal(`${header(quiz.mode === 'review' ? 'HOME UPGRADE QUIZ' : 'QUICK QUIZ', title)}<div class="quiz-top"><span>QUESTION ${shown + 1} OF ${quizBonusCh() ? 4 : 3}${quiz.mode === 'review' ? ` · MATTHEW ${quiz.chapters[shown]}` : ''}</span><span>${quiz.score} correct so far</span></div><h3 class="quiz-prompt">${escapeHtml(q.prompt)}</h3><div class="quiz-options">${q.answers.map((a, i) => `<button type="button" class="quiz-option" data-answer="${i}">${escapeHtml(a)}</button>`).join('')}</div><p id="quizFeedback" role="status" class="quiz-feedback"></p><button id="nextQuestion" type="button" class="button primary wide" disabled>${shown === 2 ? 'See results' : 'Next question'}</button>`);
+  const title = quiz.mode === 'review' ? 'Home quiz' : `${curBook(profile()).name} ${quiz.chapter}`;
+  openModal(`${header(quiz.mode === 'review' ? 'HOME UPGRADE QUIZ' : 'QUICK QUIZ', title)}<div class="quiz-top"><span>QUESTION ${shown + 1} OF ${quizBonusCh() ? 4 : 3}${quiz.mode === 'review' ? ` · ${reviewLabel(quiz.chapters[shown]).toUpperCase()}` : ''}</span><span>${quiz.score} correct so far</span></div><h3 class="quiz-prompt">${escapeHtml(q.prompt)}</h3><div class="quiz-options">${q.answers.map((a, i) => `<button type="button" class="quiz-option" data-answer="${i}">${escapeHtml(a)}</button>`).join('')}</div><p id="quizFeedback" role="status" class="quiz-feedback"></p><button id="nextQuestion" type="button" class="button primary wide" disabled>${shown === 2 ? 'See results' : 'Next question'}</button>`);
   const advance = () => { if (quiz.advancing || quiz.picked < 0 || quiz.index !== shown || quiz.runId !== runId) return; quiz.advancing = true; if (quiz.index < 2) { quiz.index++; renderQuestion(); } else if (quizBonusCh() && quiz.score === 3 && !quiz.bonusDone) { quiz.bonusDone = true; showBonus(profile(), quizBonusCh(), finishQuiz, true); } else finishQuiz(); };
   $('#modalCard').querySelectorAll('[data-answer]').forEach(b => b.onclick = () => {
     if (quiz.picked >= 0) return;
@@ -557,7 +560,7 @@ function finishQuiz() {
 
 function showBonus(p, ch, done, inQuiz) {
   const r = REFLECT[ch], little = p.age <= 6, row = little ? r.little : r.big, answers = shuffle(row.slice(1));
-  openModal(`${inQuiz ? header(quiz.mode === 'review' ? 'HOME UPGRADE QUIZ' : 'QUICK QUIZ', quiz.mode === 'review' ? 'Home quiz' : `Matthew ${quiz.chapter}`) + `<div class="quiz-top"><span>QUESTION 4 OF 4 · BONUS ⭐</span><span>${quiz.score} correct so far</span></div><p class="bonus-note">Bonus question — there’s no wrong way to try!</p>` : `${header('BONUS ⭐ THINK ABOUT IT', 'A question for your heart')}<p class="bonus-note">Free extra! Matthew ${ch <= 3 ? '1–3' : ch === 28 ? '28' : `${ch - 2}–${ch}`} · ${escapeHtml(r.title)}</p>`}<h3 class="quiz-prompt">${escapeHtml(row[0])}</h3><div class="quiz-options">${answers.map((x, i) => `<button type="button" class="quiz-option" data-b="${i}">${escapeHtml(x)}</button>`).join('')}</div><div id="bonusAfter"></div>`);
+  openModal(`${inQuiz ? header(quiz.mode === 'review' ? 'HOME UPGRADE QUIZ' : 'QUICK QUIZ', quiz.mode === 'review' ? 'Home quiz' : `${curBook(profile()).name} ${quiz.chapter}`) + `<div class="quiz-top"><span>QUESTION 4 OF 4 · BONUS ⭐</span><span>${quiz.score} correct so far</span></div><p class="bonus-note">Bonus question — there’s no wrong way to try!</p>` : `${header('BONUS ⭐ THINK ABOUT IT', 'A question for your heart')}<p class="bonus-note">Free extra! Matthew ${ch <= 3 ? '1–3' : ch === 28 ? '28' : `${ch - 2}–${ch}`} · ${escapeHtml(r.title)}</p>`}<h3 class="quiz-prompt">${escapeHtml(row[0])}</h3><div class="quiz-options">${answers.map((x, i) => `<button type="button" class="quiz-option" data-b="${i}">${escapeHtml(x)}</button>`).join('')}</div><div id="bonusAfter"></div>`);
   $('#modalCard').querySelectorAll('[data-b]').forEach(b => b.onclick = () => {
     const pick = answers[Number(b.dataset.b)], best = pick === row[1]; SkyAudio.sfx(best ? 'bonus' : 'correct');
     $('#modalCard').querySelectorAll('[data-b]').forEach(x => { x.disabled = true; if (answers[Number(x.dataset.b)] === row[1]) x.classList.add('correct'); });
@@ -606,7 +609,7 @@ function showHeartMoment(p, ch, done, forced) {
       };
     }
     $('#hmSave').onclick = async () => {
-      const entry = { id: 'j' + Date.now(), date: todayKey(), ch, title: m.title, prompt: m.kind === 'pray' ? `${m.prompt} ${m.prompt2}` : m.prompt };
+      const entry = { id: 'j' + Date.now(), date: todayKey(), ch: chForSheet(curBookId(p), ch), title: m.title, prompt: m.kind === 'pray' ? `${m.prompt} ${m.prompt2}` : m.prompt };
       if (mode === 'record') { if (!clip) return; try { await VoiceStore.put(entry.id, clip); entry.audio = true; } catch { toast('Could not save the recording on this device'); return; } }
       else { const A = $('#hmA').value.trim(), B = $('#hmB')?.value.trim() || ''; if (!A) { toast('Type your answer first'); return; } entry.text = A; if (B) entry.text2 = B; }
       addJournal(p, entry); SkyAudio.sfx('bonus');
@@ -620,13 +623,13 @@ function showHeartMoment(p, ch, done, forced) {
 // ---------- Home ----------
 const HOME_NAMES = ['Tent', 'Trailer', 'House', 'Mansion'], HOME_CLASSES = ['tent', 'trailer', 'house', 'mansion'];
 const homeStage = p => testView.homeStage ?? p.homeStage;
-const homeProgress = p => Math.max(0, Math.min(3, p.completed.length - p.homeStage * 3));
+const homeProgress = p => Math.max(0, Math.min(3, totalChapters(p) - p.homeStage * 3));
 const homeQuizReady = p => p.homeStage < 3 && homeProgress(p) >= 3;
-function homeQuizChapters(p) { const sorted = [...p.completed].sort((a, b) => a - b); return sorted.slice(p.homeStage * 3, p.homeStage * 3 + 3); }
+function homeQuizChapters(p) { const all = BOOKS.flatMap(b => [...bookDone(p, b.id)].sort((x, y) => x - y).map(n => b.id === 'matthew' ? n : [b.id, n])); return all.slice(p.homeStage * 3, p.homeStage * 3 + 3); }
 function startHomeQuiz() {
   const p = profile(); if (!p || !homeQuizReady(p)) return;
   const chapters = homeQuizChapters(p);
-  openModal(`${header('HOME UPGRADE QUIZ', `Unlock the ${HOME_NAMES[p.homeStage + 1].toLowerCase()}!`)}<p>Three new questions about Matthew ${chapters.join(', ')}. Get all three right to move into your ${HOME_NAMES[p.homeStage + 1].toLowerCase()}${p.homeStage + 1 <= 3 ? ' and get a new car' : ''}.</p><button id="beginHomeQuiz" class="button primary wide">Start the home quiz</button>`);
+  openModal(`${header('HOME UPGRADE QUIZ', `Unlock the ${HOME_NAMES[p.homeStage + 1].toLowerCase()}!`)}<p>Three new questions about ${chapters.map(reviewLabel).join(', ')}. Get all three right to move into your ${HOME_NAMES[p.homeStage + 1].toLowerCase()}${p.homeStage + 1 <= 3 ? ' and get a new car' : ''}.</p><button id="beginHomeQuiz" class="button primary wide">Start the home quiz</button>`);
   $('#beginHomeQuiz').onclick = () => startQuiz({ mode: 'review', chapters });
 }
 function finishHomeQuiz(p) {
@@ -752,7 +755,8 @@ function showParentDashboard(focusId) {
     k.completed = k.completed || []; k.dailyPass = k.dailyPass || {};
     const KB = curBook(k), read = Math.min(KB.n, bookDone(k).length), s = streak(k), last = lastReadDay(k), lastCh = last ? k.dailyPass[last] : null, lastBook = bookInfo((last && k.dailyBook?.[last]) || 'matthew').name;
     const week = Array.from({ length: 7 }, (_, i) => addDays(todayKey(), i - new Date(`${todayKey()}T12:00:00`).getDay())).map(d => `<span class="pd-day ${k.dailyPass[d] != null ? 'on' : ''} ${d > todayKey() ? 'future' : ''}" title="${d}">${new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>`).join('');
-    const talkCh = lastCh || (k.completed.length ? Math.max(...k.completed) : 1);
+    const lastBookId = (last && k.dailyBook?.[last]) || 'matthew', talkBook = talkBooks().some(b => b.id === KB.id) ? KB.id : 'matthew';
+    const talkCh = lastCh && lastBookId === talkBook ? lastCh : talkBook === 'matthew' ? (k.completed.length ? Math.max(...k.completed) : 1) : todayChapter(k);
     return `<section class="pd-kid" id="pd-${k.id}">
       <div class="pd-head"><span class="profile-avatar ${k.gender === 'girl' ? 'girl' : 'boy'}"></span><div><b>${escapeHtml(fullName(k))}</b><small>Age ${k.age}${k.grade ? ' · ' + escapeHtml(k.grade) : ''} · ${k.age <= 6 ? 'reads a short passage a day' : 'reads one chapter a day'}</small><button class="text-button pd-edit" data-editkid="${k.id}">Edit details & consent</button></div><span class="pd-streak">🔥 ${s} day${s === 1 ? '' : 's'} in a row</span></div>
       <div class="pd-progress"><div class="book-progress-top"><span>Book of ${KB.name}</span><b>${read} / ${KB.n} chapters${totalChapters(k) > read ? ` · ${totalChapters(k)} in all` : ''}</b></div><div class="book-track"><span style="width:${read / KB.n * 100}%"></span></div></div>
@@ -761,14 +765,14 @@ function showParentDashboard(focusId) {
       ${k.shareWith ? `<div class="notice">💬 ${escapeHtml(k.name)} wants to tell <b>${escapeHtml(k.shareWith)}</b> about Jesus. Help them make a plan this week!</div>` : ''}
       <div class="pd-tabs" role="tablist"><button class="pd-tab active" data-pdtab="talk" data-kid="${k.id}">💬 Questions to reflect</button><button class="pd-tab" data-pdtab="said" data-kid="${k.id}">💛 What they said${(k.journal || []).length - (k.journalSeen || 0) > 0 ? ` <span class="pd-new">${(k.journal || []).length - (k.journalSeen || 0)}</span>` : ''}</button></div>
       <div class="pd-pane hidden" data-pane="said-${k.id}">${journalHtml(k)}</div>
-      <div class="pd-pane" data-pane="talk-${k.id}"><div class="pd-talk"><div class="pd-talk-head"><b>Talk together</b><select data-talk="${k.id}" aria-label="Choose a chapter">${QUESTIONS.map((q, i) => `<option value="${i + 1}" ${i + 1 === talkCh ? 'selected' : ''}>Matthew ${i + 1}${k.completed.includes(i + 1) ? ' ✓' : ''}</option>`).join('')}</select></div>
-        <div class="pd-q" data-q="${k.id}">${talkHtml(talkCh)}</div></div></div>
+      <div class="pd-pane" data-pane="talk-${k.id}"><div class="pd-talk"><div class="pd-talk-head"><b>Talk together</b><select data-talk="${k.id}" aria-label="Choose a chapter">${talkBooks().map(b => `<optgroup label="${b.name}">${Array.from({ length: b.n }, (_, i) => `<option value="${b.id}:${i + 1}" ${b.id === talkBook && i + 1 === talkCh ? 'selected' : ''}>${b.name} ${i + 1}${bookDone(k, b.id).includes(i + 1) ? ' ✓' : ''}</option>`).join('')}</optgroup>`).join('')}</select></div>
+        <div class="pd-q" data-q="${k.id}">${talkHtml(talkCh, talkBook)}</div></div></div>
     </section>`;
   }).join('');
   openModal(`${header('PARENTS', 'Parent dashboard')}<p>See how your kids are doing, hear what they shared, and use the questions to talk together. Ask, listen, and share what God is teaching you too!</p>${cards}<button id="pdInstall" class="button secondary wide pd-install">📲 Save to home screen</button><div class="pd-foot"><button id="pdChangePin" class="text-button">Change parent code</button><a class="text-button" href="qa.html" target="_blank" rel="noopener">All questions & answers →</a></div>`);
   $('#modalCard').querySelectorAll('[data-pdtab]').forEach(b => b.onclick = () => { const kid = b.dataset.kid; $('#modalCard').querySelectorAll(`[data-kid="${kid}"]`).forEach(x => x.classList.toggle('active', x === b)); ['said', 'talk'].forEach(t => $('#modalCard').querySelector(`[data-pane="${t}-${kid}"]`).classList.toggle('hidden', t !== b.dataset.pdtab)); });
   $('#modalCard').querySelectorAll('[data-editkid]').forEach(b => b.onclick = () => showDetails(state.profiles.find(x => x.id === b.dataset.editkid), () => showParentDashboard(b.dataset.editkid)));
-  $('#modalCard').querySelectorAll('[data-talk]').forEach(sel => sel.onchange = () => { $('#modalCard').querySelector(`[data-q="${sel.dataset.talk}"]`).innerHTML = talkHtml(Number(sel.value)); });
+  $('#modalCard').querySelectorAll('[data-talk]').forEach(sel => sel.onchange = () => { $('#modalCard').querySelector(`[data-q="${sel.dataset.talk}"]`).innerHTML = talkHtml(Number(sel.value.split(':')[1]), sel.value.split(':')[0]); });
   $('#modalCard').querySelectorAll('[data-clip]').forEach(async el => { try { const b = await VoiceStore.get(el.dataset.clip); if (b) el.src = URL.createObjectURL(b); else el.replaceWith(Object.assign(document.createElement('small'), { textContent: '(recording not found on this device)' })); } catch { } });
   $('#modalCard').querySelectorAll('[data-deljournal]').forEach(b => b.onclick = () => { const [kid, id] = b.dataset.deljournal.split('|'), k = state.profiles.find(x => x.id === kid); if (!k || !confirmDelete(b)) return; k.journal = (k.journal || []).filter(e => e.id !== id); VoiceStore.del(id).catch(() => { }); save(); showParentDashboard(kid); });
   $('#modalCard').querySelectorAll('[data-morejournal]').forEach(b => b.onclick = () => { b.closest('.pd-journal').classList.add('all'); b.remove(); });
@@ -781,11 +785,13 @@ function confirmDelete(b) { if (b.dataset.armed) return true; b.dataset.armed = 
 function journalHtml(k) {
   const j = (k.journal || []).slice().reverse(); if (!j.length) return `<div class="pd-journal empty"><b>💛 What ${escapeHtml(k.name)} shared</b><small>After reading, ${escapeHtml(k.name)} gets a question, a prayer break or a message to record for you. Their answers will show up here.</small></div>`;
   const fresh = j.length - (k.journalSeen || 0);
-  return `<div class="pd-journal"><div class="pd-journal-head"><b>What ${escapeHtml(k.name)} shared after reading</b></div>${j.map((e, i) => `<div class="pd-entry ${i >= 4 ? 'more' : ''}"><small>${niceDay(e.date)} · after reading Matthew ${e.ch}</small><div class="pd-asked"><span>We asked them:</span><p>${escapeHtml(e.prompt)}</p></div><div class="pd-said"><span>They said:</span>${e.audio ? `<audio controls preload="metadata" data-clip="${e.id}"></audio>` : ''}${e.text ? `<p>“${escapeHtml(e.text)}”${e.text2 ? `<br>🙏 “${escapeHtml(e.text2)}”` : ''}</p>` : ''}</div><button class="text-button pd-del" data-deljournal="${k.id}|${e.id}">Delete</button></div>`).join('')}${j.length > 4 ? '<button class="text-button" data-morejournal>Show all</button>' : ''}</div>`;
+  return `<div class="pd-journal"><div class="pd-journal-head"><b>What ${escapeHtml(k.name)} shared after reading</b></div>${j.map((e, i) => `<div class="pd-entry ${i >= 4 ? 'more' : ''}"><small>${niceDay(e.date)} · after reading ${/[a-z]/i.test(String(e.ch)) ? e.ch : `Matthew ${e.ch}`}</small><div class="pd-asked"><span>We asked them:</span><p>${escapeHtml(e.prompt)}</p></div><div class="pd-said"><span>They said:</span>${e.audio ? `<audio controls preload="metadata" data-clip="${e.id}"></audio>` : ''}${e.text ? `<p>“${escapeHtml(e.text)}”${e.text2 ? `<br>🙏 “${escapeHtml(e.text2)}”` : ''}</p>` : ''}</div><button class="text-button pd-del" data-deljournal="${k.id}|${e.id}">Delete</button></div>`).join('')}${j.length > 4 ? '<button class="text-button" data-morejournal>Show all</button>' : ''}</div>`;
 }
-function talkHtml(n) {
-  const q = QUESTIONS[n - 1], t = PARENT_TALK[n] || [];
-  return `<p class="pd-chapter">Matthew ${n} · ${escapeHtml(q.title)} · <span>reading for ages 4–6: ${n}:${littleSpan(n, 'matthew').join('–')}</span></p><ol>${t.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>`;
+// Books with parent talk questions: Matthew (parents.js) plus any book in books/talk-*.js.
+const talkBooks = () => BOOKS.filter(b => b.id === 'matthew' || window.BOOK_TALK?.[b.id]);
+function talkHtml(n, id = 'matthew') {
+  const q = bookQ(id)[n - 1], t = (id === 'matthew' ? PARENT_TALK : window.BOOK_TALK?.[id] || {})[n] || [];
+  return `<p class="pd-chapter">${bookInfo(id).name} ${n} · ${escapeHtml(q.title)} · <span>reading for ages 4–6: ${n}:${littleSpan(n, id).join('–')}</span></p><ol>${t.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>`;
 }
 
 function showGrownUps() {
