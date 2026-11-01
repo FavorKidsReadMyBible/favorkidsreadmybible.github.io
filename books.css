@@ -1,0 +1,9 @@
+/* Book picker on the reading map (Matthew, Mark, Luke…) */
+.bk-shelf{--bk-ink:#29464a;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 14px}
+.bk-book{display:grid;gap:4px;text-align:left;border:3px solid var(--bk);background:#fff;border-radius:16px;padding:12px;color:var(--bk-ink);box-shadow:0 5px 0 var(--bk);cursor:pointer;font:inherit}
+.bk-book b{font-family:FavorSans,'DM Sans',sans-serif;font-size:22px;color:var(--bk)}
+.bk-book small{font-weight:800}
+.bk-book i{font-style:normal;font-size:12px;color:#6e7775;line-height:1.3}
+.bk-book.on{background:var(--bk);color:#fff}.bk-book.on b,.bk-book.on i{color:#fff}
+.bk-book:disabled{opacity:.55;box-shadow:none;cursor:default}
+@media(max-width:600px){.bk-shelf{grid-template-columns:1fr 1fr}}

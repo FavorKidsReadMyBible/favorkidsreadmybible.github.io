@@ -39,13 +39,14 @@ function profile() {
   return p;
 }
 function firstName(p) { return p.name.trim().split(/\s+/)[0]; }
-const completed = (p, n) => p.completed.includes(n);
+const completed = (p, n) => bookDone(p).includes(n);   // in the book being read now (see books.js)
 const SKINS = ['#d9a983', '#ca9670', '#bb835d', '#ad7352', '#9e6446'];
 
 // ---------- Reading rules: one chapter a day, in order, every day ----------
 function nextChapter(p) {
-  for (let n = 1; n <= 28; n++) if (!completed(p, n)) return n;
-  return ((p.rereadCount || 0) % 28) + 1;                    // after Matthew 28: reread from the start
+  const N = curBook(p).n;
+  for (let n = 1; n <= N; n++) if (!completed(p, n)) return n;
+  return ((p.rereadCount || 0) % N) + 1;                    // after Matthew 28: reread from the start
 }
 // Launch catch-up: the first chapters can be read back to back, so kids who start late aren't behind.
 const CATCH_UP = 4;
@@ -58,7 +59,7 @@ function todayChapter(p) {
 }
 const passedToday = p => p.dailyPass[todayKey()] != null;
 const canPlay = p => isMaster() || passedToday(p);
-const rereading = p => p.completed.length >= 28;
+const rereading = p => bookDone(p).length >= curBook(p).n;
 function streak(p) {
   let day = todayKey(), count = 0;
   if (p.dailyPass[day] == null) day = addDays(day, -1);        // today not done yet: streak is still alive from yesterday
@@ -70,7 +71,7 @@ function streak(p) {
 function wardrobe(p) {
   if (!p.cosmetics) {
     const hats = { 2: 'aviator-goggles', 6: 'sun-cap', 10: 'moon-helmet', 14: 'gold-crown', 18: 'star-visor', 22: 'winged-helmet', 26: 'winged-helmet' }, outfits = { 0: 'coral-scout', 4: 'sky-pilot', 8: 'forest-ranger', 12: 'royal-adventurer', 16: 'golden-guardian', 20: 'sunset-surfer', 24: 'night-explorer' }, trails = { 1: 'star-dust', 5: 'cloud-puffs', 9: 'star-dust', 13: 'sky-bolt', 17: 'heart-sparks', 21: 'page-flutter', 25: 'star-dust' };
-    p.cosmetics = { accessory: hats[p.equipped?.hat] || null, trail: trails[p.equipped?.trail] || null, jetpack: completed(p, 3) ? 'classic-pack' : null, outfit: outfits[p.equipped?.outfit] || null };
+    p.cosmetics = { accessory: hats[p.equipped?.hat] || null, trail: trails[p.equipped?.trail] || null, jetpack: p.completed.includes(3) ? 'classic-pack' : null, outfit: outfits[p.equipped?.outfit] || null };
     p.legacyCosmetics = Object.values(p.cosmetics).filter(Boolean); save();
   }
   const swap = { 'rainbow-band': 'sunburst-band', 'rainbow-ribbon': 'sky-bolt' };
@@ -80,7 +81,7 @@ function wardrobe(p) {
   }
   return p.cosmetics;
 }
-const cosmeticUnlocked = (p, item) => isMaster() || completed(p, item.chapter) || !!p.legacyCosmetics?.includes(item.id);
+const cosmeticUnlocked = (p, item) => isMaster() || p.completed.includes(item.chapter) || !!p.legacyCosmetics?.includes(item.id);
 const equippedCosmetic = (p, type) => cosmeticById(wardrobe(p)[type]);
 
 // ---------- Character art ----------
@@ -134,7 +135,7 @@ function render() {
   $('#activeProfileLabel').textContent = p ? `${p.name} · age ${p.age}` : 'No explorer selected';
   $('#primaryButton').textContent = p ? 'Continue adventure' : 'Start my adventure';
   if (!p) return;
-  const n = todayChapter(p), little = p.age <= 6, q = QUESTIONS[n - 1], done = passedToday(p) && !catchUpOpen(p);
+  const n = todayChapter(p), little = p.age <= 6, B = curBook(p), q = bookQ(B.id)[n - 1], done = passedToday(p) && !catchUpOpen(p);
   $('#welcomeTitle').textContent = `Ready, ${firstName(p)}?`;
   if (p.lastOpenSent !== todayKey() && p.consent?.yes) { p.lastOpenSent = todayKey(); save(); Sync.event(p, 'Opened the game'); }
 
@@ -143,7 +144,7 @@ function render() {
   $('#streakNumber').textContent = s;
   $('#streakUnit').textContent = s === 1 ? 'day' : 'days';
   const heat = Math.min(1, s / 14); const card = $('.streak-card'); card.style.setProperty('--heat', heat.toFixed(3)); card.dataset.heat = s >= 14 ? 'blaze' : s >= 7 ? 'hot' : s >= 3 ? 'warm' : s > 0 ? 'lit' : 'out';
-  const read = Math.min(28, p.completed.length); $('#bookText').textContent = `${read} / 28 chapters`; $('#bookBar').style.width = `${read / 28 * 100}%`;
+  const read = Math.min(B.n, bookDone(p).length); $('#bookText').textContent = `${read} / ${B.n} chapters`; $('#bookBar').style.width = `${read / B.n * 100}%`; const bpt = document.querySelector('.book-progress-top span'); if (bpt) bpt.textContent = `Book of ${B.name}`;
   $('.streak-card').classList.toggle('lit', s > 0);
   $('#streakHeadline').textContent = s >= 14 ? 'Blazing! You’re unstoppable!' : s >= 7 ? 'You’re on fire!' : s >= 3 ? 'Your fire is getting bigger!' : s > 0 ? 'Your fire is lit!' : 'Light your fire!';
   const tk = todayKey(), dow = new Date(`${tk}T12:00:00`).getDay(), wk = Array.from({ length: 7 }, (_, i) => addDays(tk, i - dow));   // Sunday → Saturday of this week
@@ -153,14 +154,14 @@ function render() {
   $('#streakText').textContent = s >= 28 ? '28-day champion! Keep the fire going!' : s === 0 ? 'Read today to light your fire!' : done ? `Day ${s} of 28 · see you tomorrow!` : `Day ${s} of 28 · read today to keep it going!`;
 
   // Today
-  $('#todayTitle').textContent = `Matthew ${n}${little ? `:${littleSpan(n).join('–')}` : ''}`;
+  $('#todayTitle').textContent = `${B.name} ${n}${little ? `:${littleSpan(n).join('–')}` : ''}`;
   if (done) {
     const next = nextChapter(p);
-    $('#todayDescription').textContent = `Great job! Come back tomorrow to read your Bible again${rereading(p) && p.completed.length === 28 && next === 1 ? '' : ` — Matthew ${next} is next`}.`;
+    $('#todayDescription').textContent = `Great job! Come back tomorrow to read your Bible again${rereading(p) && bookDone(p).length === B.n && next === 1 ? '' : ` — ${B.name} ${next} is next`}.`;
     $('#readTodayButton').textContent = 'Come back tomorrow';
     $('#readTodayButton').disabled = !isMaster();
   } else {
-    $('#todayDescription').textContent = `${little ? 'Today’s reading' : 'Today’s chapter'}: ${q.title}. ${rereading(p) ? 'You finished Matthew — reading it again helps you notice new things!' : catchUpOpen(p) && passedToday(p) ? 'Want to keep going? You can read ahead!' : catchUpOpen(p) ? 'Read it and get 3 of 3 quiz answers right to fly. Want more? You can read ahead!' : 'Read it and get 3 of 3 quiz answers right to fly.'}`;
+    $('#todayDescription').textContent = `${little ? 'Today’s reading' : 'Today’s chapter'}: ${q.title}. ${rereading(p) ? `You finished ${B.name}! Pick a new book on your reading map, or read it again` + ' — reading it again helps you notice new things!' : catchUpOpen(p) && passedToday(p) ? 'Want to keep going? You can read ahead!' : catchUpOpen(p) ? 'Read it and get 3 of 3 quiz answers right to fly. Want more? You can read ahead!' : 'Read it and get 3 of 3 quiz answers right to fly.'}`;
     $('#readTodayButton').textContent = 'Read my Bible';
     $('#readTodayButton').disabled = false;
   }
@@ -177,6 +178,7 @@ function render() {
   drawPlayPreview(p);
   setTimeout(() => maybeWelcome(profile()), 300);
   if (p.completed.length === 28 && !p.congratsShown) { p.congratsShown = true; save(); setTimeout(showCongratulations, 400); }
+  if (B.id !== 'matthew' && bookDone(p).length === B.n && !(p.booksCongrats || {})[B.id]) { p.booksCongrats = { ...(p.booksCongrats || {}), [B.id]: true }; save(); setTimeout(showCongratulations, 400); }
 }
 function renderLoadout(p) {
   const box = $('#homeLoadout');
@@ -187,8 +189,9 @@ function renderLoadout(p) {
   box.querySelectorAll('[data-loadout]').forEach(b => b.onclick = () => showRewards(b.dataset.loadout));
 }
 function showCongratulations() {
-  openModal(`${header('YOU DID IT', 'Matthew complete!')}<p>You read all 28 chapters of Matthew. What an adventure! Reading it again helps you notice something new every time, so tomorrow you’ll start again at Matthew 1. Keep your streak going!</p><div class="notice">Every reading reward is now unlocked for this explorer.</div><button id="congratsDone" class="button primary wide">Keep exploring</button>`);
-  $('#congratsDone').onclick = closeModal;
+  const p = profile(), B = curBook(p), left = BOOKS.filter(b => !b.soon && bookDone(p, b.id).length < b.n);
+  openModal(`${header('YOU DID IT', `${B.name} complete!`)}<p>You read all ${B.n} chapters of ${B.name}. What an adventure!${left.length ? ` Now choose your next book: ${left.map(b => b.name).join(', ')}. Your streak, home and outfits come with you!` : ' You finished every book that’s open so far. Luke opens in December!'}</p>${B.id === 'matthew' ? '<div class="notice">Every reading reward is now unlocked for this explorer.</div>' : ''}<button id="congratsDone" class="button primary wide">${left.length ? 'Choose my next book' : 'Keep exploring'}</button>`);
+  $('#congratsDone').onclick = () => left.length ? showChapters() : closeModal();
 }
 
 // ---------- New-day welcome: Day N shakes, bursts, the fire grows, and it becomes Day N+1 (can't be skipped) ----------
@@ -323,7 +326,7 @@ function maybeDetails(p) {
   showDetails(p);
 }
 function addJournal(p, entry) { p.journal = p.journal || []; p.journal.push(entry); save(); Sync.answer(p, entry); }
-Sync.progress = p => ({ chapters: (p.completed || []).length, currentChapter: todayChapter(p), streak: streak(p), home: ['Tent', 'Trailer', 'House', 'Mansion'][p.homeStage || 0] });
+Sync.progress = p => ({ chapters: totalChapters(p), currentChapter: chForSheet(curBookId(p), todayChapter(p)), streak: streak(p), home: ['Tent', 'Trailer', 'House', 'Mansion'][p.homeStage || 0] });
 
 // ---------- Profiles modal ----------
 function showProfiles() {
@@ -361,22 +364,25 @@ function showTransfer() {
   };
 }
 function showHow() {
-  openModal(`${header('HOW TO PLAY', 'Read • Answer • Fly')}<div class="chapter-row"><b>1. Read every day</b><small>One chapter of Matthew a day, in order. Ages 4–6 read a short passage (and can tap Read more for the whole chapter); ages 7–12 read the whole chapter.</small></div><br><div class="chapter-row"><b>2. Answer three questions</b><small>Get all three right. You can try again as many times as you need.</small></div><br><div class="chapter-row"><b>3. Fly in Sky Run</b><small>Hold to rise, let go to fall. Dodge gears and zappers, catch stars, and grab glowing Bibles to throw pages.</small></div><br><div class="chapter-row"><b>4. Unlock and grow</b><small>Every chapter unlocks a new look. Every 3 chapters fills your home bar — pass the home quiz to move up from tent to trailer, house, and mansion.</small></div><br><div class="chapter-row"><b>5. Keep your streak</b><small>Read every day, weekends too, to keep your fire burning. Miss a day and the streak starts again.</small></div>`);
+  openModal(`${header('HOW TO PLAY', 'Read • Answer • Fly')}<div class="chapter-row"><b>1. Read every day</b><small>One chapter a day, in order (this month: the book of Mark). Ages 4–6 read a short passage (and can tap Read more for the whole chapter); ages 7–12 read the whole chapter.</small></div><br><div class="chapter-row"><b>2. Answer three questions</b><small>Get all three right. You can try again as many times as you need.</small></div><br><div class="chapter-row"><b>3. Fly in Sky Run</b><small>Hold to rise, let go to fall. Dodge gears and zappers, catch stars, and grab glowing Bibles to throw pages.</small></div><br><div class="chapter-row"><b>4. Unlock and grow</b><small>Every chapter unlocks a new look. Every 3 chapters fills your home bar — pass the home quiz to move up from tent to trailer, house, and mansion.</small></div><br><div class="chapter-row"><b>5. Keep your streak</b><small>Read every day, weekends too, to keep your fire burning. Miss a day and the streak starts again.</small></div>`);
 }
 function showChapters() {
   const p = profile(); if (!p) { showProfiles(); return; }
-  const today = todayChapter(p), master = isMaster();
-  openModal(`${header('MY READING MAP', 'Matthew 1–28')}<p>One chapter a day. Finished chapters get a check mark; today’s chapter glows gold.${master ? ' <b>Test mode:</b> tap any chapter to open it.' : ''}</p><div class="chapter-grid">${QUESTIONS.map((q, i) => { const n = i + 1, done = completed(p, n), isToday = n === today; return `<button class="chapter-tile ${done ? 'done' : ''} ${isToday ? 'today' : ''} ${!done && !isToday ? 'locked' : ''}" data-chapter="${n}" ${master ? '' : 'disabled'}>MAT ${n}<small>${done ? '✓ Read' : isToday ? 'Today' : 'Coming soon'}</small></button>`; }).join('')}</div><button id="viewRewards" class="button secondary wide">See my wardrobe</button>`);
+  const today = todayChapter(p), master = isMaster(), B = curBook(p);
+  const shelf = `<div class="bk-shelf">${BOOKS.map(b => { const d = bookDone(p, b.id).length, can = !b.soon; return `<button class="bk-book ${b.id === B.id ? 'on' : ''} ${d >= b.n ? 'done' : ''}" data-book="${b.id}" style="--bk:${b.color}" ${can ? '' : 'disabled'}><b>${b.name}</b><small>${can ? `${d} / ${b.n}${d >= b.n ? ' ✓' : ''}` : `🔒 ${b.soon}`}</small><i>${b.blurb}</i></button>`; }).join('')}</div>`;
+  openModal(`${header('MY READING MAP', `${B.name} 1–${B.n}`)}${shelf}<p>This month we’re all reading Mark! Tap a book to switch. Your streak, home and outfits come with you. Finished chapters get a check mark; today’s chapter glows gold.${master ? ' <b>Test mode:</b> tap any chapter to open it.' : ''}</p><div class="chapter-grid">${bookQ(B.id).map((q, i) => { const n = i + 1, done = completed(p, n), isToday = n === today; return `<button class="chapter-tile ${done ? 'done' : ''} ${isToday ? 'today' : ''} ${!done && !isToday ? 'locked' : ''}" data-chapter="${n}" ${master ? '' : 'disabled'}>${B.name.slice(0, 3).toUpperCase()} ${n}<small>${done ? '✓ Read' : isToday ? 'Today' : 'Coming soon'}</small></button>`; }).join('')}</div><button id="viewRewards" class="button secondary wide">See my wardrobe</button>`);
   if (master) $('#modalCard').querySelectorAll('[data-chapter]').forEach(b => b.onclick = () => showReading(Number(b.dataset.chapter)));
+  $('#modalCard').querySelectorAll('[data-book]').forEach(b => b.onclick = () => { if (b.dataset.book === curBookId(p)) return; p.book = b.dataset.book; p.today = null; save(); SkyAudio.sfx('page'); render(); showChapters(); toast(`Next up: ${bookInfo(p.book).name}!`); });
   $('#viewRewards').onclick = () => showRewards();
 }
 
 // ---------- Reading ----------
 // Ages 4–6 read a short passage (the key verse and the verses around it); "Read more" opens the whole chapter.
-function littleSpan(n) { const v = QUESTIONS[n - 1].verse, max = Math.max(...(window.NET_MATTHEW?.[n] || [[v]]).map(x => x[0])); return [Math.max(1, v - 2), Math.min(max, v + 2)]; }
+function littleSpan(n, id = curBookId(profile())) {
+  const v = bookQ(id)[n - 1].verse, txt = id === 'matthew' ? window.NET_MATTHEW : (window[bookTextKey('WEB', id)] || window[bookTextKey('BBE', id)]), max = Math.max(...(txt?.[n] || [[v + 2]]).map(x => x[0])); return [Math.max(1, v - 2), Math.min(max, v + 2)]; }
 let readMore = false;
 const isLittleView = p => p.age <= 6 && !readMore;
-const netPassage = (n, p) => { if (!isLittleView(p)) return `Matthew ${n}`; const [a, b] = littleSpan(n); return `Matthew ${n}:${a}–${b}`; };
+const netPassage = (n, p) => { const nm = curBook(p).name; if (!isLittleView(p)) return `${nm} ${n}`; const [a, b] = littleSpan(n); return `${nm} ${n}:${a}–${b}`; };
 function loadNet(reference) {
   return new Promise((resolve, reject) => {
     const cb = `netCallback_${Date.now()}_${Math.floor(Math.random() * 10000)}`, script = document.createElement('script'); let done = false, timer;
@@ -401,7 +407,14 @@ function loadBible(code) {
   return new Promise((ok, bad) => { const s = document.createElement('script'); s.src = b.file; s.onload = ok; s.onerror = bad; document.head.append(s); });
 }
 async function getPassage(n, p) {
-  const code = bibleOf(p);
+  const code = bibleOf(p), id = curBookId(p);
+  if (id !== 'matthew') {   // Mark, Luke, John: public-domain text is bundled; NET comes from the NET Bible service
+    const cut = verses => { if (!isLittleView(p)) return verses; const [a, b] = littleSpan(n); return verses.filter(v => v[0] >= a && v[0] <= b); };
+    if (code !== 'NET') { await loadBookText(code, id); const v = window[bookTextKey(code, id)]?.[n]; if (v) return cut(v); }
+    await loadBookText('WEB', id).catch(() => { });
+    try { const data = await loadNet(netPassage(n, p)); const list = Array.isArray(data) ? data : []; if (list.length) return list.map(v => [Number(v.verse), String(v.text || '').replace(/<[^>]*>/g, '').trim()]); } catch { }
+    const w = window[bookTextKey('WEB', id)]?.[n]; if (w) return cut(w); throw Error('No passage');
+  }
   if (code !== 'NET') {
     await loadBible(code);
     const verses = window[BIBLES[code].key]?.[n];
@@ -458,7 +471,7 @@ async function showReading(n, keepMore) {
   if (!isMaster() && (n !== todayChapter(p) || (passedToday(p) && !catchUpOpen(p)))) { toast(passedToday(p) ? 'Come back tomorrow to read your Bible again!' : 'Read today’s chapter first'); return; }
   stopNarration(); readingChapter = n; passageText = ''; SkyAudio.scene('reading'); SkyAudio.sfx('page');
   const ref = netPassage(n, p);
-  openModal(`${header('READ YOUR BIBLE', escapeHtml(ref))}<div class="bible-row"><span>${escapeHtml(QUESTIONS[n - 1].title)}</span><label class="bible-pick">Bible <select id="bibleSelect" aria-label="Bible version">${Object.entries(BIBLES).map(([k, b]) => `<option value="${k}" ${b.soon ? 'disabled' : ''} ${k === bibleOf(p) ? 'selected' : ''}>${b.short}${b.soon ? ' · coming soon' : ''}</option>`).join('')}</select></label></div><div id="passageBox" class="passage-box">Loading…</div><div class="passage-actions"><button id="listenButton" class="button secondary" disabled>▶ Read aloud</button></div><div class="notice">Read to the end, then answer three questions. A grown-up can help younger readers.</div><button id="quizButton" class="button primary wide" disabled>Read to the end to start the quiz</button>${isMaster() ? '<button id="skipQuiz" class="button ghost wide test-button">Test mode: skip quiz and pass</button>' : ''}`);
+  openModal(`${header('READ YOUR BIBLE', escapeHtml(ref))}<div class="bible-row"><span>${escapeHtml(bookQ(curBookId(p))[n - 1].title)}</span><label class="bible-pick">Bible <select id="bibleSelect" aria-label="Bible version">${Object.entries(BIBLES).map(([k, b]) => `<option value="${k}" ${b.soon ? 'disabled' : ''} ${k === bibleOf(p) ? 'selected' : ''}>${b.short}${b.soon ? ' · coming soon' : ''}</option>`).join('')}</select></label></div><div id="passageBox" class="passage-box">Loading…</div><div class="passage-actions"><button id="listenButton" class="button secondary" disabled>▶ Read aloud</button></div><div class="notice">Read to the end, then answer three questions. A grown-up can help younger readers.</div><button id="quizButton" class="button primary wide" disabled>Read to the end to start the quiz</button>${isMaster() ? '<button id="skipQuiz" class="button ghost wide test-button">Test mode: skip quiz and pass</button>' : ''}`);
   $('#bibleSelect').onchange = e => { p.bible = e.target.value; save(); showReading(n, true); };
   $('#quizButton').onclick = () => startQuiz({ mode: 'daily', chapter: n });
   $('#skipQuiz')?.addEventListener('click', () => { quiz = { mode: 'daily', chapter: n, score: 3 }; finishQuiz(); });
@@ -473,12 +486,12 @@ async function showReading(n, keepMore) {
     const enable = () => { const b = $('#quizButton'); if (b && b.disabled) { b.disabled = false; b.textContent = 'Start the 3-question quiz'; } };
     box.onscroll = () => { if (box.scrollTop + box.clientHeight >= box.scrollHeight - 25) enable(); };
     if (box.scrollHeight <= box.clientHeight + 8 || (p.age <= 6 && readMore)) enable();
-    const listen = $('#listenButton'), file = bibleOf(p) === 'NET' ? audioFor(n, p) : null;
+    const listen = $('#listenButton'), file = bibleOf(p) === 'NET' && curBookId(p) === 'matthew' ? audioFor(n, p) : null;
     listen.disabled = false;
     listen.onclick = () => { if (narration.active) { stopNarration(); return; } if (file) playAudioFile(file, listen); else playDeviceVoice(passageText, p.age, listen); };
   } catch {
     const box = $('#passageBox'); if (!box) return;
-    box.innerHTML = `The passage could not load right now. <a href="https://netbible.org/bible/Matthew+${n}" target="_blank" rel="noopener">Open Matthew ${n} on the NET Bible site</a>, then come back for the quiz.`;
+    box.innerHTML = `The passage could not load right now. <a href="https://netbible.org/bible/${curBook(p).name}+${n}" target="_blank" rel="noopener">Open ${curBook(p).name} ${n} on the NET Bible site</a>, then come back for the quiz.`;
     const b = $('#quizButton'); b.disabled = false; b.textContent = 'I read it — start the quiz';
   }
 }
@@ -487,19 +500,22 @@ async function showReading(n, keepMore) {
 const shuffle = arr => arr.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
 const toQuestion = row => ({ prompt: row[0], correct: row[1], answers: shuffle(row.slice(1)) });
 // The bonus reflection is question 4 of the quiz on chapters 3, 6, 9 … 27 and 28 (and in the matching home quiz).
-function quizBonusCh() { if (!quiz || typeof REFLECT === 'undefined') return 0; const ch = quiz.mode === 'review' ? Math.max(...quiz.chapters) : quiz.chapter; return REFLECT[ch] ? ch : 0; }
+function quizBonusCh() { if (!quiz || typeof REFLECT === 'undefined' || (quiz.mode !== 'review' && curBookId(profile()) !== 'matthew')) return 0; const ch = quiz.mode === 'review' ? Math.max(...quiz.chapters) : quiz.chapter; return REFLECT[ch] ? ch : 0; }
+// Home quiz chapters can come from any book: Matthew uses REVIEW; other books use one of their own chapter questions.
+const reviewRow = (c, key) => { const [id, n] = typeof c === 'number' ? ['matthew', c] : c; if (id === 'matthew') return REVIEW[n - 1][key]; const rows = bookQ(id)[n - 1][key]; return rows[Math.floor(Math.random() * rows.length)]; };
+const reviewLabel = c => typeof c === 'number' ? `Matthew ${c}` : `${bookInfo(c[0]).name} ${c[1]}`;
 function startQuiz(opts) {
   stopNarration();
   const p = profile(), key = p.age <= 6 ? 'little' : 'big';
-  const rows = opts.mode === 'review' ? opts.chapters.map(n => REVIEW[n - 1][key]) : QUESTIONS[opts.chapter - 1][key];
+  const rows = opts.mode === 'review' ? opts.chapters.map(c => reviewRow(c, key)) : bookQ(curBookId(p))[opts.chapter - 1][key];
   quiz = { ...opts, questions: rows.map(toQuestion), index: 0, score: 0, runId: (quiz?.runId || 0) + 1 };
   renderQuestion();
 }
 function renderQuestion() {
   const q = quiz.questions[quiz.index], shown = quiz.index, runId = quiz.runId;
   quiz.picked = -1; quiz.advancing = false;
-  const title = quiz.mode === 'review' ? 'Home quiz' : `Matthew ${quiz.chapter}`;
-  openModal(`${header(quiz.mode === 'review' ? 'HOME UPGRADE QUIZ' : 'QUICK QUIZ', title)}<div class="quiz-top"><span>QUESTION ${shown + 1} OF ${quizBonusCh() ? 4 : 3}${quiz.mode === 'review' ? ` · MATTHEW ${quiz.chapters[shown]}` : ''}</span><span>${quiz.score} correct so far</span></div><h3 class="quiz-prompt">${escapeHtml(q.prompt)}</h3><div class="quiz-options">${q.answers.map((a, i) => `<button type="button" class="quiz-option" data-answer="${i}">${escapeHtml(a)}</button>`).join('')}</div><p id="quizFeedback" role="status" class="quiz-feedback"></p><button id="nextQuestion" type="button" class="button primary wide" disabled>${shown === 2 ? 'See results' : 'Next question'}</button>`);
+  const title = quiz.mode === 'review' ? 'Home quiz' : `${curBook(profile()).name} ${quiz.chapter}`;
+  openModal(`${header(quiz.mode === 'review' ? 'HOME UPGRADE QUIZ' : 'QUICK QUIZ', title)}<div class="quiz-top"><span>QUESTION ${shown + 1} OF ${quizBonusCh() ? 4 : 3}${quiz.mode === 'review' ? ` · ${reviewLabel(quiz.chapters[shown]).toUpperCase()}` : ''}</span><span>${quiz.score} correct so far</span></div><h3 class="quiz-prompt">${escapeHtml(q.prompt)}</h3><div class="quiz-options">${q.answers.map((a, i) => `<button type="button" class="quiz-option" data-answer="${i}">${escapeHtml(a)}</button>`).join('')}</div><p id="quizFeedback" role="status" class="quiz-feedback"></p><button id="nextQuestion" type="button" class="button primary wide" disabled>${shown === 2 ? 'See results' : 'Next question'}</button>`);
   const advance = () => { if (quiz.advancing || quiz.picked < 0 || quiz.index !== shown || quiz.runId !== runId) return; quiz.advancing = true; if (quiz.index < 2) { quiz.index++; renderQuestion(); } else if (quizBonusCh() && quiz.score === 3 && !quiz.bonusDone) { quiz.bonusDone = true; showBonus(profile(), quizBonusCh(), finishQuiz, true); } else finishQuiz(); };
   $('#modalCard').querySelectorAll('[data-answer]').forEach(b => b.onclick = () => {
     if (quiz.picked >= 0) return;
@@ -523,27 +539,28 @@ function finishQuiz() {
   if (quiz.mode === 'daily' && !quiz.test && !quiz.heartDone && heartMomentFor(quiz.chapter)) { quiz.heartDone = true; showHeartMoment(p, quiz.chapter, finishQuiz); return; }
   if (quiz.mode === 'review' && quiz.test) { openModal(`${header('TEST MODE', 'Home quiz passed')}<p>In normal play this would upgrade the home. Nothing was saved.</p><button class="button primary wide" data-close>Close</button>`); return; }
   if (quiz.mode === 'review') return finishHomeQuiz(p);
-  const n = quiz.chapter, isNew = !completed(p, n);
-  if (isNew) p.completed.push(n); else if (rereading(p)) p.rereadCount = (p.rereadCount || 0) + 1;
+  const n = quiz.chapter, isNew = !completed(p, n), B = curBook(p);
+  if (isNew) bookDone(p).push(n); else if (rereading(p)) p.rereadCount = (p.rereadCount || 0) + 1;
   p.dailyPass[todayKey()] = n;
-  Sync.event(p, isNew ? 'Read a chapter' : 'Reread a chapter', { chapter: n });
-  const reward = isNew ? COSMETICS.find(item => item.chapter === n) : null;
-  const finished = p.completed.length === 28 && isNew;
-  if (finished) p.congratsShown = true;
+  p.dailyBook = { ...(p.dailyBook || {}), [todayKey()]: B.id };
+  Sync.event(p, isNew ? 'Read a chapter' : 'Reread a chapter', { chapter: chForSheet(B.id, n) });
+  const reward = isNew && B.id === 'matthew' ? COSMETICS.find(item => item.chapter === n) : null;
+  const finished = bookDone(p).length === B.n && isNew;
+  if (finished) { if (B.id === 'matthew') p.congratsShown = true; else p.booksCongrats = { ...(p.booksCongrats || {}), [B.id]: true }; }
   save(); render();
   SkyAudio.jingle(); if (streak(p) > 1) setTimeout(() => SkyAudio.sfx('flame'), 900);
   const homeReady = homeQuizReady(p);
-  openModal(`${header(finished ? 'MATTHEW COMPLETE' : 'CHAPTER COMPLETE', finished ? 'You finished Matthew!' : 'Great reading!')}${reward ? `<div class="reward-celebration">${cosmeticArt(reward)}</div><h3 style="text-align:center">Unlocked: ${reward.name}</h3>` : '<h3 style="text-align:center">You remembered it!</h3>'}<p style="text-align:center">${finished ? 'You read all 28 chapters! Tomorrow you’ll start again at Matthew 1 — every reread shows you something new.' : catchUpOpen(p) ? `All three answers right! Sky Run is open. Want to keep going? You can read ahead to Matthew ${nextChapter(p)}!` : 'All three answers right! Sky Run is open — fly as much as you like today. Come back tomorrow to read your Bible again.'}</p>${homeReady ? '<div class="notice">Your home bar is full! Take the home quiz to upgrade your home.</div>' : ''}<div class="two-col">${reward ? '<button id="rewardNext" class="button secondary">Try it on</button>' : homeReady ? '<button id="homeQuizNext" class="button secondary">Home quiz</button>' : '<button id="closeDone" class="button secondary">Done</button>'}<button id="finishNext" class="button primary">Play Sky Run</button></div>`);
+  openModal(`${header(finished ? `${B.name.toUpperCase()} COMPLETE` : 'CHAPTER COMPLETE', finished ? `You finished ${B.name}!` : 'Great reading!')}${reward ? `<div class="reward-celebration">${cosmeticArt(reward)}</div><h3 style="text-align:center">Unlocked: ${reward.name}</h3>` : '<h3 style="text-align:center">You remembered it!</h3>'}<p style="text-align:center">${finished ? `You read all ${B.n} chapters of ${B.name}! Open your reading map to choose your next book.` : catchUpOpen(p) ? `All three answers right! Sky Run is open. Want to keep going? You can read ahead to ${B.name} ${nextChapter(p)}!` : 'All three answers right! Sky Run is open — fly as much as you like today. Come back tomorrow to read your Bible again.'}</p>${homeReady ? '<div class="notice">Your home bar is full! Take the home quiz to upgrade your home.</div>' : ''}<div class="two-col">${reward ? '<button id="rewardNext" class="button secondary">Try it on</button>' : homeReady ? '<button id="homeQuizNext" class="button secondary">Home quiz</button>' : '<button id="closeDone" class="button secondary">Done</button>'}<button id="finishNext" class="button primary">Play Sky Run</button></div>`);
   $('#rewardNext')?.addEventListener('click', () => showRewards(reward.type, reward.id));
   $('#homeQuizNext')?.addEventListener('click', startHomeQuiz);
-  if (catchUpOpen(p)) { const b = document.createElement('button'); b.className = 'button primary wide'; b.style.marginTop = '12px'; b.textContent = `Read Matthew ${nextChapter(p)} next`; b.onclick = () => showReading(todayChapter(p)); $('#modalCard').append(b); }
+  if (catchUpOpen(p)) { const b = document.createElement('button'); b.className = 'button primary wide'; b.style.marginTop = '12px'; b.textContent = `Read ${B.name} ${nextChapter(p)} next`; b.onclick = () => showReading(todayChapter(p)); $('#modalCard').append(b); }
   $('#closeDone')?.addEventListener('click', closeModal);
   $('#finishNext').onclick = () => { closeModal(); openGame(); };
 }
 
 function showBonus(p, ch, done, inQuiz) {
   const r = REFLECT[ch], little = p.age <= 6, row = little ? r.little : r.big, answers = shuffle(row.slice(1));
-  openModal(`${inQuiz ? header(quiz.mode === 'review' ? 'HOME UPGRADE QUIZ' : 'QUICK QUIZ', quiz.mode === 'review' ? 'Home quiz' : `Matthew ${quiz.chapter}`) + `<div class="quiz-top"><span>QUESTION 4 OF 4 · BONUS ⭐</span><span>${quiz.score} correct so far</span></div><p class="bonus-note">Bonus question — there’s no wrong way to try!</p>` : `${header('BONUS ⭐ THINK ABOUT IT', 'A question for your heart')}<p class="bonus-note">Free extra! Matthew ${ch <= 3 ? '1–3' : ch === 28 ? '28' : `${ch - 2}–${ch}`} · ${escapeHtml(r.title)}</p>`}<h3 class="quiz-prompt">${escapeHtml(row[0])}</h3><div class="quiz-options">${answers.map((x, i) => `<button type="button" class="quiz-option" data-b="${i}">${escapeHtml(x)}</button>`).join('')}</div><div id="bonusAfter"></div>`);
+  openModal(`${inQuiz ? header(quiz.mode === 'review' ? 'HOME UPGRADE QUIZ' : 'QUICK QUIZ', quiz.mode === 'review' ? 'Home quiz' : `${curBook(profile()).name} ${quiz.chapter}`) + `<div class="quiz-top"><span>QUESTION 4 OF 4 · BONUS ⭐</span><span>${quiz.score} correct so far</span></div><p class="bonus-note">Bonus question — there’s no wrong way to try!</p>` : `${header('BONUS ⭐ THINK ABOUT IT', 'A question for your heart')}<p class="bonus-note">Free extra! Matthew ${ch <= 3 ? '1–3' : ch === 28 ? '28' : `${ch - 2}–${ch}`} · ${escapeHtml(r.title)}</p>`}<h3 class="quiz-prompt">${escapeHtml(row[0])}</h3><div class="quiz-options">${answers.map((x, i) => `<button type="button" class="quiz-option" data-b="${i}">${escapeHtml(x)}</button>`).join('')}</div><div id="bonusAfter"></div>`);
   $('#modalCard').querySelectorAll('[data-b]').forEach(b => b.onclick = () => {
     const pick = answers[Number(b.dataset.b)], best = pick === row[1]; SkyAudio.sfx(best ? 'bonus' : 'correct');
     $('#modalCard').querySelectorAll('[data-b]').forEach(x => { x.disabled = true; if (answers[Number(x.dataset.b)] === row[1]) x.classList.add('correct'); });
@@ -563,7 +580,7 @@ function showBonus(p, ch, done, inQuiz) {
 }
 
 // ---------- Heart moments: typed answers, prayer breaks and voice messages for parents ----------
-function heartMomentFor(ch) { return ch === 28 ? null : HEART_MOMENTS[(ch - 1) % HEART_MOMENTS.length]; }
+function heartMomentFor(ch) { return ch === curBook(profile()).n ? null : HEART_MOMENTS[(ch - 1) % HEART_MOMENTS.length]; }
 function showHeartMoment(p, ch, done, forced) {
   const m = forced || heartMomentFor(ch), little = p.age <= 6; if (!m) return done();
   let mode = m.kind === 'record' || little ? 'record' : 'type', clip = null, timer = null;
@@ -592,7 +609,7 @@ function showHeartMoment(p, ch, done, forced) {
       };
     }
     $('#hmSave').onclick = async () => {
-      const entry = { id: 'j' + Date.now(), date: todayKey(), ch, title: m.title, prompt: m.kind === 'pray' ? `${m.prompt} ${m.prompt2}` : m.prompt };
+      const entry = { id: 'j' + Date.now(), date: todayKey(), ch: chForSheet(curBookId(p), ch), title: m.title, prompt: m.kind === 'pray' ? `${m.prompt} ${m.prompt2}` : m.prompt };
       if (mode === 'record') { if (!clip) return; try { await VoiceStore.put(entry.id, clip); entry.audio = true; } catch { toast('Could not save the recording on this device'); return; } }
       else { const A = $('#hmA').value.trim(), B = $('#hmB')?.value.trim() || ''; if (!A) { toast('Type your answer first'); return; } entry.text = A; if (B) entry.text2 = B; }
       addJournal(p, entry); SkyAudio.sfx('bonus');
@@ -606,13 +623,13 @@ function showHeartMoment(p, ch, done, forced) {
 // ---------- Home ----------
 const HOME_NAMES = ['Tent', 'Trailer', 'House', 'Mansion'], HOME_CLASSES = ['tent', 'trailer', 'house', 'mansion'];
 const homeStage = p => testView.homeStage ?? p.homeStage;
-const homeProgress = p => Math.max(0, Math.min(3, p.completed.length - p.homeStage * 3));
+const homeProgress = p => Math.max(0, Math.min(3, totalChapters(p) - p.homeStage * 3));
 const homeQuizReady = p => p.homeStage < 3 && homeProgress(p) >= 3;
-function homeQuizChapters(p) { const sorted = [...p.completed].sort((a, b) => a - b); return sorted.slice(p.homeStage * 3, p.homeStage * 3 + 3); }
+function homeQuizChapters(p) { const all = BOOKS.flatMap(b => [...bookDone(p, b.id)].sort((x, y) => x - y).map(n => b.id === 'matthew' ? n : [b.id, n])); return all.slice(p.homeStage * 3, p.homeStage * 3 + 3); }
 function startHomeQuiz() {
   const p = profile(); if (!p || !homeQuizReady(p)) return;
   const chapters = homeQuizChapters(p);
-  openModal(`${header('HOME UPGRADE QUIZ', `Unlock the ${HOME_NAMES[p.homeStage + 1].toLowerCase()}!`)}<p>Three new questions about Matthew ${chapters.join(', ')}. Get all three right to move into your ${HOME_NAMES[p.homeStage + 1].toLowerCase()}${p.homeStage + 1 <= 3 ? ' and get a new car' : ''}.</p><button id="beginHomeQuiz" class="button primary wide">Start the home quiz</button>`);
+  openModal(`${header('HOME UPGRADE QUIZ', `Unlock the ${HOME_NAMES[p.homeStage + 1].toLowerCase()}!`)}<p>Three new questions about ${chapters.map(reviewLabel).join(', ')}. Get all three right to move into your ${HOME_NAMES[p.homeStage + 1].toLowerCase()}${p.homeStage + 1 <= 3 ? ' and get a new car' : ''}.</p><button id="beginHomeQuiz" class="button primary wide">Start the home quiz</button>`);
   $('#beginHomeQuiz').onclick = () => startQuiz({ mode: 'review', chapters });
 }
 function finishHomeQuiz(p) {
@@ -736,13 +753,13 @@ function showParentDashboard(focusId) {
   const kids = state.profiles; if (!kids.length) { openModal(`${header('PARENTS', 'Parent dashboard')}<div class="notice">No explorers on this device yet. Create one from Profiles.</div>`); return; }
   const cards = kids.map(k => {
     k.completed = k.completed || []; k.dailyPass = k.dailyPass || {};
-    const read = Math.min(28, k.completed.length), s = streak(k), last = lastReadDay(k), lastCh = last ? k.dailyPass[last] : null;
+    const KB = curBook(k), read = Math.min(KB.n, bookDone(k).length), s = streak(k), last = lastReadDay(k), lastCh = last ? k.dailyPass[last] : null, lastBook = bookInfo((last && k.dailyBook?.[last]) || 'matthew').name;
     const week = Array.from({ length: 7 }, (_, i) => addDays(todayKey(), i - new Date(`${todayKey()}T12:00:00`).getDay())).map(d => `<span class="pd-day ${k.dailyPass[d] != null ? 'on' : ''} ${d > todayKey() ? 'future' : ''}" title="${d}">${new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>`).join('');
     const talkCh = lastCh || (k.completed.length ? Math.max(...k.completed) : 1);
     return `<section class="pd-kid" id="pd-${k.id}">
       <div class="pd-head"><span class="profile-avatar ${k.gender === 'girl' ? 'girl' : 'boy'}"></span><div><b>${escapeHtml(fullName(k))}</b><small>Age ${k.age}${k.grade ? ' · ' + escapeHtml(k.grade) : ''} · ${k.age <= 6 ? 'reads a short passage a day' : 'reads one chapter a day'}</small><button class="text-button pd-edit" data-editkid="${k.id}">Edit details & consent</button></div><span class="pd-streak">🔥 ${s} day${s === 1 ? '' : 's'} in a row</span></div>
-      <div class="pd-progress"><div class="book-progress-top"><span>Book of Matthew</span><b>${read} / 28 chapters</b></div><div class="book-track"><span style="width:${read / 28 * 100}%"></span></div></div>
-      <p class="pd-last">Last read: <b>${niceDay(last)}${lastCh ? ` · Matthew ${lastCh}` : ''}</b></p>
+      <div class="pd-progress"><div class="book-progress-top"><span>Book of ${KB.name}</span><b>${read} / ${KB.n} chapters${totalChapters(k) > read ? ` · ${totalChapters(k)} in all` : ''}</b></div><div class="book-track"><span style="width:${read / KB.n * 100}%"></span></div></div>
+      <p class="pd-last">Last read: <b>${niceDay(last)}${lastCh ? ` · ${lastBook} ${lastCh}` : ''}</b></p>
       <div class="pd-week"><small>Days read this week</small><div>${week}</div></div>
       ${k.shareWith ? `<div class="notice">💬 ${escapeHtml(k.name)} wants to tell <b>${escapeHtml(k.shareWith)}</b> about Jesus. Help them make a plan this week!</div>` : ''}
       <div class="pd-tabs" role="tablist"><button class="pd-tab active" data-pdtab="talk" data-kid="${k.id}">💬 Questions to reflect</button><button class="pd-tab" data-pdtab="said" data-kid="${k.id}">💛 What they said${(k.journal || []).length - (k.journalSeen || 0) > 0 ? ` <span class="pd-new">${(k.journal || []).length - (k.journalSeen || 0)}</span>` : ''}</button></div>
@@ -767,11 +784,11 @@ function confirmDelete(b) { if (b.dataset.armed) return true; b.dataset.armed = 
 function journalHtml(k) {
   const j = (k.journal || []).slice().reverse(); if (!j.length) return `<div class="pd-journal empty"><b>💛 What ${escapeHtml(k.name)} shared</b><small>After reading, ${escapeHtml(k.name)} gets a question, a prayer break or a message to record for you. Their answers will show up here.</small></div>`;
   const fresh = j.length - (k.journalSeen || 0);
-  return `<div class="pd-journal"><div class="pd-journal-head"><b>What ${escapeHtml(k.name)} shared after reading</b></div>${j.map((e, i) => `<div class="pd-entry ${i >= 4 ? 'more' : ''}"><small>${niceDay(e.date)} · after reading Matthew ${e.ch}</small><div class="pd-asked"><span>We asked them:</span><p>${escapeHtml(e.prompt)}</p></div><div class="pd-said"><span>They said:</span>${e.audio ? `<audio controls preload="metadata" data-clip="${e.id}"></audio>` : ''}${e.text ? `<p>“${escapeHtml(e.text)}”${e.text2 ? `<br>🙏 “${escapeHtml(e.text2)}”` : ''}</p>` : ''}</div><button class="text-button pd-del" data-deljournal="${k.id}|${e.id}">Delete</button></div>`).join('')}${j.length > 4 ? '<button class="text-button" data-morejournal>Show all</button>' : ''}</div>`;
+  return `<div class="pd-journal"><div class="pd-journal-head"><b>What ${escapeHtml(k.name)} shared after reading</b></div>${j.map((e, i) => `<div class="pd-entry ${i >= 4 ? 'more' : ''}"><small>${niceDay(e.date)} · after reading ${/[a-z]/i.test(String(e.ch)) ? e.ch : `Matthew ${e.ch}`}</small><div class="pd-asked"><span>We asked them:</span><p>${escapeHtml(e.prompt)}</p></div><div class="pd-said"><span>They said:</span>${e.audio ? `<audio controls preload="metadata" data-clip="${e.id}"></audio>` : ''}${e.text ? `<p>“${escapeHtml(e.text)}”${e.text2 ? `<br>🙏 “${escapeHtml(e.text2)}”` : ''}</p>` : ''}</div><button class="text-button pd-del" data-deljournal="${k.id}|${e.id}">Delete</button></div>`).join('')}${j.length > 4 ? '<button class="text-button" data-morejournal>Show all</button>' : ''}</div>`;
 }
 function talkHtml(n) {
   const q = QUESTIONS[n - 1], t = PARENT_TALK[n] || [];
-  return `<p class="pd-chapter">Matthew ${n} · ${escapeHtml(q.title)} · <span>reading for ages 4–6: ${n}:${littleSpan(n).join('–')}</span></p><ol>${t.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>`;
+  return `<p class="pd-chapter">Matthew ${n} · ${escapeHtml(q.title)} · <span>reading for ages 4–6: ${n}:${littleSpan(n, 'matthew').join('–')}</span></p><ol>${t.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>`;
 }
 
 function showGrownUps() {
