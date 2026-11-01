@@ -1,0 +1,22 @@
+// Conversation starters for parents, book of Mark. Same format as PARENT_TALK in parents.js:
+//   1) a personal question that helps your child reflect, and
+//   2) a "share together" question that you BOTH answer (you go first!).
+window.BOOK_TALK = window.BOOK_TALK || {};
+window.BOOK_TALK.mark = {
+  1: ['Jesus got up very early, while it was still dark, to go somewhere quiet and pray. When is a good quiet time for you to talk to God?', 'Share together: pick one time this week you’ll each spend a few quiet minutes with God, then check in with each other about it.'],
+  2: ['Four friends carried a man to Jesus, and when the house was full they made a hole in the roof! Who is a friend who would never give up on you?', 'Share together: who is someone we could “carry to Jesus” by praying for them or helping them this week?'],
+  3: ['Jesus picked twelve ordinary people to be His closest friends and helpers. How does it feel to know Jesus picks you too?', 'Share together: tell each other one thing you’re glad God made you good at, and one way you could use it to help someone.'],
+  4: ['The wind and waves obeyed Jesus, and the storm became calm. What is something that feels like a storm in your life right now?', 'Share together: tell each other about one “storm” you’re facing, then pray for Jesus to bring His calm.'],
+  5: ['A woman believed that just touching Jesus’ clothes would make her well, and Jesus stopped to talk with her. How does it feel to know Jesus always has time for you?', 'Share together: when did someone stop what they were doing just for you? How could we do that for each other this week?'],
+  6: ['A boy shared his small lunch, and Jesus fed more than 5,000 people with it! What small thing could you give to Jesus?', 'Share together: what is one thing our family has that we could share with someone who needs it?'],
+  7: ['Jesus said what makes us “clean” or “dirty” comes from our hearts, not our hands. What helps you keep your heart kind?', 'Share together: tell each other one thing you’d like God to help clean up in your heart, then pray for each other.'],
+  8: ['Jesus asked His friends, “Who do you say that I am?” Who is Jesus to you?', 'Share together: each of you finish this sentence: “Jesus is my…” and tell why you chose that word.'],
+  9: ['A dad told Jesus, “I believe; help my unbelief!” Is there something that’s hard for you to believe God can do?', 'Share together: tell each other about a time it was hard to trust God, and how He showed up.'],
+  10: ['Jesus said, “Let the little children come to me,” and He hugged them and blessed them. What would you want to tell Jesus if you could sit with Him right now?', 'Share together: parent goes first: tell your child one way you see God blessing them. Then let them bless you back!'],
+  11: ['Crowds waved branches and shouted “Hosanna!” when Jesus rode into the city. What is one way you can praise Jesus today?', 'Share together: name three things you each want to thank God for right now, and say a quick thank-you prayer.'],
+  12: ['A poor widow gave just two tiny coins, but Jesus said she gave more than everyone, because she gave all she had. Why do you think Jesus cares more about our hearts than how much we give?', 'Share together: Jesus said the greatest commands are to love God and love others. What is one way we can show love to someone outside our family this week?'],
+  13: ['Jesus said heaven and earth will pass away, but His words will never pass away. What is a Bible promise you want to remember?', 'Share together: choose one verse to learn together this week and remind each other of it every day.'],
+  14: ['On the night before He died, Jesus prayed, “Not what I want, but what you want.” Is it hard for you to do what God wants instead of what you want?', 'Share together: Peter said he would never let Jesus down, but he did, and Jesus still loved and forgave him. Tell each other about a time you were forgiven.'],
+  15: ['Jesus died on the cross because He loves us so much. How does it make you feel to know Jesus gave everything for you?', 'Share together: take a quiet moment to thank Jesus together for what He did on the cross. Then tell each other what His love means to you.'],
+  16: ['The angel said, “He is risen!” Jesus is alive! What is the best part about knowing Jesus is alive today?', 'Share together: Jesus told His friends to tell everyone the good news. Who is one person each of you could tell about Jesus this week?']
+};

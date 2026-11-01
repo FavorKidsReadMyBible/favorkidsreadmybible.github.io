@@ -755,7 +755,8 @@ function showParentDashboard(focusId) {
     k.completed = k.completed || []; k.dailyPass = k.dailyPass || {};
     const KB = curBook(k), read = Math.min(KB.n, bookDone(k).length), s = streak(k), last = lastReadDay(k), lastCh = last ? k.dailyPass[last] : null, lastBook = bookInfo((last && k.dailyBook?.[last]) || 'matthew').name;
     const week = Array.from({ length: 7 }, (_, i) => addDays(todayKey(), i - new Date(`${todayKey()}T12:00:00`).getDay())).map(d => `<span class="pd-day ${k.dailyPass[d] != null ? 'on' : ''} ${d > todayKey() ? 'future' : ''}" title="${d}">${new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'narrow' })}</span>`).join('');
-    const talkCh = lastCh || (k.completed.length ? Math.max(...k.completed) : 1);
+    const lastBookId = (last && k.dailyBook?.[last]) || 'matthew', talkBook = talkBooks().some(b => b.id === KB.id) ? KB.id : 'matthew';
+    const talkCh = lastCh && lastBookId === talkBook ? lastCh : talkBook === 'matthew' ? (k.completed.length ? Math.max(...k.completed) : 1) : todayChapter(k);
     return `<section class="pd-kid" id="pd-${k.id}">
       <div class="pd-head"><span class="profile-avatar ${k.gender === 'girl' ? 'girl' : 'boy'}"></span><div><b>${escapeHtml(fullName(k))}</b><small>Age ${k.age}${k.grade ? ' · ' + escapeHtml(k.grade) : ''} · ${k.age <= 6 ? 'reads a short passage a day' : 'reads one chapter a day'}</small><button class="text-button pd-edit" data-editkid="${k.id}">Edit details & consent</button></div><span class="pd-streak">🔥 ${s} day${s === 1 ? '' : 's'} in a row</span></div>
       <div class="pd-progress"><div class="book-progress-top"><span>Book of ${KB.name}</span><b>${read} / ${KB.n} chapters${totalChapters(k) > read ? ` · ${totalChapters(k)} in all` : ''}</b></div><div class="book-track"><span style="width:${read / KB.n * 100}%"></span></div></div>
@@ -764,14 +765,14 @@ function showParentDashboard(focusId) {
       ${k.shareWith ? `<div class="notice">💬 ${escapeHtml(k.name)} wants to tell <b>${escapeHtml(k.shareWith)}</b> about Jesus. Help them make a plan this week!</div>` : ''}
       <div class="pd-tabs" role="tablist"><button class="pd-tab active" data-pdtab="talk" data-kid="${k.id}">💬 Questions to reflect</button><button class="pd-tab" data-pdtab="said" data-kid="${k.id}">💛 What they said${(k.journal || []).length - (k.journalSeen || 0) > 0 ? ` <span class="pd-new">${(k.journal || []).length - (k.journalSeen || 0)}</span>` : ''}</button></div>
       <div class="pd-pane hidden" data-pane="said-${k.id}">${journalHtml(k)}</div>
-      <div class="pd-pane" data-pane="talk-${k.id}"><div class="pd-talk"><div class="pd-talk-head"><b>Talk together</b><select data-talk="${k.id}" aria-label="Choose a chapter">${QUESTIONS.map((q, i) => `<option value="${i + 1}" ${i + 1 === talkCh ? 'selected' : ''}>Matthew ${i + 1}${k.completed.includes(i + 1) ? ' ✓' : ''}</option>`).join('')}</select></div>
-        <div class="pd-q" data-q="${k.id}">${talkHtml(talkCh)}</div></div></div>
+      <div class="pd-pane" data-pane="talk-${k.id}"><div class="pd-talk"><div class="pd-talk-head"><b>Talk together</b><select data-talk="${k.id}" aria-label="Choose a chapter">${talkBooks().map(b => `<optgroup label="${b.name}">${Array.from({ length: b.n }, (_, i) => `<option value="${b.id}:${i + 1}" ${b.id === talkBook && i + 1 === talkCh ? 'selected' : ''}>${b.name} ${i + 1}${bookDone(k, b.id).includes(i + 1) ? ' ✓' : ''}</option>`).join('')}</optgroup>`).join('')}</select></div>
+        <div class="pd-q" data-q="${k.id}">${talkHtml(talkCh, talkBook)}</div></div></div>
     </section>`;
   }).join('');
   openModal(`${header('PARENTS', 'Parent dashboard')}<p>See how your kids are doing, hear what they shared, and use the questions to talk together. Ask, listen, and share what God is teaching you too!</p>${cards}<button id="pdInstall" class="button secondary wide pd-install">📲 Save to home screen</button><div class="pd-foot"><button id="pdChangePin" class="text-button">Change parent code</button><a class="text-button" href="qa.html" target="_blank" rel="noopener">All questions & answers →</a></div>`);
   $('#modalCard').querySelectorAll('[data-pdtab]').forEach(b => b.onclick = () => { const kid = b.dataset.kid; $('#modalCard').querySelectorAll(`[data-kid="${kid}"]`).forEach(x => x.classList.toggle('active', x === b)); ['said', 'talk'].forEach(t => $('#modalCard').querySelector(`[data-pane="${t}-${kid}"]`).classList.toggle('hidden', t !== b.dataset.pdtab)); });
   $('#modalCard').querySelectorAll('[data-editkid]').forEach(b => b.onclick = () => showDetails(state.profiles.find(x => x.id === b.dataset.editkid), () => showParentDashboard(b.dataset.editkid)));
-  $('#modalCard').querySelectorAll('[data-talk]').forEach(sel => sel.onchange = () => { $('#modalCard').querySelector(`[data-q="${sel.dataset.talk}"]`).innerHTML = talkHtml(Number(sel.value)); });
+  $('#modalCard').querySelectorAll('[data-talk]').forEach(sel => sel.onchange = () => { $('#modalCard').querySelector(`[data-q="${sel.dataset.talk}"]`).innerHTML = talkHtml(Number(sel.value.split(':')[1]), sel.value.split(':')[0]); });
   $('#modalCard').querySelectorAll('[data-clip]').forEach(async el => { try { const b = await VoiceStore.get(el.dataset.clip); if (b) el.src = URL.createObjectURL(b); else el.replaceWith(Object.assign(document.createElement('small'), { textContent: '(recording not found on this device)' })); } catch { } });
   $('#modalCard').querySelectorAll('[data-deljournal]').forEach(b => b.onclick = () => { const [kid, id] = b.dataset.deljournal.split('|'), k = state.profiles.find(x => x.id === kid); if (!k || !confirmDelete(b)) return; k.journal = (k.journal || []).filter(e => e.id !== id); VoiceStore.del(id).catch(() => { }); save(); showParentDashboard(kid); });
   $('#modalCard').querySelectorAll('[data-morejournal]').forEach(b => b.onclick = () => { b.closest('.pd-journal').classList.add('all'); b.remove(); });
@@ -786,9 +787,11 @@ function journalHtml(k) {
   const fresh = j.length - (k.journalSeen || 0);
   return `<div class="pd-journal"><div class="pd-journal-head"><b>What ${escapeHtml(k.name)} shared after reading</b></div>${j.map((e, i) => `<div class="pd-entry ${i >= 4 ? 'more' : ''}"><small>${niceDay(e.date)} · after reading ${/[a-z]/i.test(String(e.ch)) ? e.ch : `Matthew ${e.ch}`}</small><div class="pd-asked"><span>We asked them:</span><p>${escapeHtml(e.prompt)}</p></div><div class="pd-said"><span>They said:</span>${e.audio ? `<audio controls preload="metadata" data-clip="${e.id}"></audio>` : ''}${e.text ? `<p>“${escapeHtml(e.text)}”${e.text2 ? `<br>🙏 “${escapeHtml(e.text2)}”` : ''}</p>` : ''}</div><button class="text-button pd-del" data-deljournal="${k.id}|${e.id}">Delete</button></div>`).join('')}${j.length > 4 ? '<button class="text-button" data-morejournal>Show all</button>' : ''}</div>`;
 }
-function talkHtml(n) {
-  const q = QUESTIONS[n - 1], t = PARENT_TALK[n] || [];
-  return `<p class="pd-chapter">Matthew ${n} · ${escapeHtml(q.title)} · <span>reading for ages 4–6: ${n}:${littleSpan(n, 'matthew').join('–')}</span></p><ol>${t.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>`;
+// Books with parent talk questions: Matthew (parents.js) plus any book in books/talk-*.js.
+const talkBooks = () => BOOKS.filter(b => b.id === 'matthew' || window.BOOK_TALK?.[b.id]);
+function talkHtml(n, id = 'matthew') {
+  const q = bookQ(id)[n - 1], t = (id === 'matthew' ? PARENT_TALK : window.BOOK_TALK?.[id] || {})[n] || [];
+  return `<p class="pd-chapter">${bookInfo(id).name} ${n} · ${escapeHtml(q.title)} · <span>reading for ages 4–6: ${n}:${littleSpan(n, id).join('–')}</span></p><ol>${t.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ol>`;
 }
 
 function showGrownUps() {
