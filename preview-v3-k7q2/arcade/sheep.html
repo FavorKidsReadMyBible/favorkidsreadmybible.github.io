@@ -1,0 +1,182 @@
+<!doctype html><html lang="en"><head><title>Lost Sheep Dash</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+@font-face{font-family:FavorSans;src:url('/favor-sans-bold.otf')}@font-face{font-family:Agharti;src:url('/agharti-bold.ttf')}
+[hidden]{display:none!important}
+/* Layout: night pasture — header + score bar, the maze canvas centred, a thumb d-pad under it on phones */
+:root{
+  --night:#0b1f3a; --hill:#123a5c; --hedge:#2f8f5b; --light:#ffe27a; --wool:#f5f1e8; --wolf:#8a93a6; --ink:#0b1f3a; --ember:#f95600;
+  --display:Agharti,Impact,sans-serif; --body:FavorSans,'Trebuchet MS',system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--night);color:var(--wool);font-family:var(--body);margin:0;overflow-x:hidden}
+.wrap{max-width:720px;margin:0 auto;padding-block:16px 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:12px;align-items:stretch}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:400;letter-spacing:1px;text-transform:uppercase;font-size:clamp(34px,7vw,54px);line-height:.9;margin:0;color:var(--light)}
+.draft{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;background:var(--hill);padding:6px 12px;border-radius:999px}
+.hud{display:flex;gap:10px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.pill{background:var(--hill);border-radius:12px;padding:6px 12px;font-weight:600}
+.pill b{color:var(--light)}
+.stage{position:relative;width:100%;max-width:560px;margin:0 auto}
+canvas{display:block;width:100%;height:auto;border-radius:18px;background:#081830;touch-action:none}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;background:rgba(8,24,48,.86);border-radius:18px;padding:20px}
+.overlay h2{font-family:var(--display);font-weight:400;letter-spacing:1px;text-transform:uppercase;font-size:44px;margin:0;color:var(--light);line-height:.95}
+.overlay p{margin:0;max-width:34ch;line-height:1.45}
+.btn{font:700 18px var(--body);border:0;border-radius:16px;padding:12px 22px;background:var(--light);color:var(--ink);cursor:pointer}
+.btn:focus-visible,.pad button:focus-visible{outline:3px solid var(--hedge);outline-offset:2px}
+.pad{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,56px);gap:8px;justify-content:center}
+.pad button{border:0;border-radius:14px;background:var(--hill);color:var(--wool);font:700 22px var(--body);cursor:pointer}
+.pad .up{grid-column:2}.pad .left{grid-column:1;grid-row:2}.pad .down{grid-column:2;grid-row:2}.pad .right{grid-column:3;grid-row:2}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:#b8c6db}
+.legend span{display:flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--light)}
+.lamp{width:14px;height:14px;border-radius:50%;background:var(--ember);box-shadow:0 0 8px var(--light)}
+.sw{width:14px;height:14px;border-radius:50%;background:var(--wool)}
+.wf{width:14px;height:14px;border-radius:4px;background:var(--wolf)}
+.note{font-size:14px;color:#b8c6db;line-height:1.5;max-width:65ch}
+</style>
+
+<div class="wrap">
+  <header><h1>Lost Sheep Dash</h1><span class="draft" id="best">Best 0</span></header>
+  <div class="hud"><span class="pill">Score <b id="score">0</b></span><span class="pill">Sheep found <b id="sheep">0</b>/3</span><span class="pill">Lives <b id="lives">3</b></span><span class="pill">Level <b id="level">1</b></span></div>
+  <div class="stage">
+    <canvas id="c" width="546" height="598" aria-label="Maze game: guide the shepherd to collect light and find lost sheep"></canvas>
+    <div class="overlay" id="ov">
+      <h2>Find the lost sheep!</h2>
+      <p>Collect every bit of light and bring home all 3 lost sheep. Watch out for wolves! Grab a lamp to make them run away for a few seconds.</p>
+      <button class="btn" id="start">Start</button>
+      <p style="font-size:14px;opacity:.8">Use the arrow keys, swipe on the maze, or tap the arrows.</p>
+    </div>
+  </div>
+  <div class="pad" aria-label="Arrow buttons">
+    <button class="up" data-d="0,-1" aria-label="Up">▲</button><button class="left" data-d="-1,0" aria-label="Left">◀</button><button class="down" data-d="0,1" aria-label="Down">▼</button><button class="right" data-d="1,0" aria-label="Right">▶</button>
+  </div>
+  <div class="legend"><span><i class="dot"></i>Light</span><span><i class="lamp"></i>Lamp: “Your word is a lamp to my feet” (Psalm 119:105)</span><span><i class="sw"></i>Lost sheep</span><span><i class="wf"></i>Wolf</span></div>
+</div>
+
+<script>
+const Snd=(()=>{let ac;const ok=()=>{try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();return ac}catch{return null}};
+ const tone=(f,d=.09,type='sine',v=.12,slide=0)=>{const a=ok();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,a.currentTime);if(slide)o.frequency.exponentialRampToValueAtTime(f*slide,a.currentTime+d);g.gain.setValueAtTime(v,a.currentTime);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d);o.connect(g).connect(a.destination);o.start();o.stop(a.currentTime+d)};
+ return{tap:()=>tone(520,.06,'triangle',.08),good:()=>{tone(660,.1,'triangle');setTimeout(()=>tone(880,.14,'triangle'),90)},bad:()=>tone(220,.22,'sawtooth',.06,.6),win:()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.16,'triangle',.1),i*110)),blip:()=>tone(900,.03,'square',.03),power:()=>tone(300,.4,'sine',.12,3)}})();
+const buzz=p=>{try{navigator.vibrate?.(p)}catch{}};
+const Q=new URLSearchParams(location.search),CH=Math.max(1,Math.min(28,Number(Q.get('ch'))||1)),AGE=Number(Q.get('age'))||8,NAME=(Q.get('name')||'').slice(0,20);
+function confetti(n=120){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const c=document.createElement('canvas'),d=Math.min(2,devicePixelRatio||1);c.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:9';document.body.append(c);const w=c.width=innerWidth*d,h=c.height=innerHeight*d,x=c.getContext('2d'),cols=['#faa731','#c86354','#59877d','#a28fbc','#fbe8ca','#ffe25a'];const ps=Array.from({length:n},()=>({x:w/2+(Math.random()-.5)*w*.3,y:h*.4,vx:(Math.random()-.5)*26*d,vy:(-Math.random()*22-8)*d,r:(4+Math.random()*6)*d,a:Math.random()*6,va:(Math.random()-.5)*.4,c:cols[Math.floor(Math.random()*6)]}));let t=0;const k=()=>{x.clearRect(0,0,w,h);t++;ps.forEach(p=>{p.vy+=.7*d;p.vx*=.985;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillStyle=p.c;x.fillRect(-p.r,-p.r/2,p.r*2,p.r);x.restore()});if(t<140)requestAnimationFrame(k);else c.remove()};k()}
+
+const MAP=[
+"#####################",
+"#o........#........o#",
+"#.###.###.#.###.###.#",
+"#...................#",
+"#.###.#.#####.#.###.#",
+"#.....#...#...#.....#",
+"#####.### # ###.#####",
+"    #.#       #.#    ",
+"#####.# ##-## #.#####",
+"     .  #DDD#  .     ",
+"#####.# ##### #.#####",
+"    #.#       #.#    ",
+"#####.# ##### #.#####",
+"#.........#.........#",
+"#.###.###.#.###.###.#",
+"#o..#.....P.....#..o#",
+"###.#.#.#####.#.#.###",
+"#.....#...#...#.....#",
+"#.#######.#.#######.#",
+"#...................#",
+"#####################"];
+const R=MAP.length,C=MAP[0].length,T=26;
+const cv=document.getElementById('c'),g=cv.getContext('2d');
+const DPR=Math.min(2.5,devicePixelRatio||1);cv.width=C*T*DPR;cv.height=R*T*DPR;g.setTransform(DPR,0,0,DPR,0,0);const CW=C*T,CH2=R*T;
+let grid,dots,player,wolves,sheep,score=0,lives=3,level=1,found=0,scared=0,running=false,last=0,want=[0,0];
+const wall=(x,y)=>{if(x<0||x>=C)return false;const ch=grid[y]?.[x];return ch==='#'||ch==='-'};
+const wolfWall=(x,y,w)=>{if(x<0||x>=C)return false;const ch=grid[y]?.[x];return ch==='#'||(ch==='-'&&!w.leaving)};
+function reset(full){
+  grid=MAP.map(r=>r.split(''));dots=0;let den=[];
+  for(let y=0;y<R;y++)for(let x=0;x<C;x++){const ch=grid[y][x];if(ch==='.'||ch==='o')dots++;if(ch==='P')player={x,y,px:x,py:y,d:[0,0],t:0};if(ch==='D')den.push([x,y])}
+  const spd=Math.min((AGE<=6?4.2:5.2)+level*.4,7.5);
+  wolves=den.map(([x,y],i)=>({x,y,px:x,py:y,d:[0,-1],t:0,home:[x,y],leaving:true,wait:i*70,speed:spd*.82,c:['#8a93a6','#a07b5c','#6f7f91'][i]}));
+  player.speed=spd;
+  // hide 3 sheep on dot squares far from start
+  const spots=[];for(let y=0;y<R;y++)for(let x=0;x<C;x++)if(grid[y][x]==='.'&&Math.abs(x-player.x)+Math.abs(y-player.y)>10)spots.push([x,y]);
+  sheep=[];while(sheep.length<3){const s=spots.splice(Math.floor(Math.random()*spots.length),1)[0];sheep.push({x:s[0],y:s[1],got:false})}
+  found=0;scared=0;want=[0,0];hud();
+}
+function saveBest(){try{const b=Math.max(score,Number(localStorage.getItem('rmb-sheep-best')||0));localStorage.setItem('rmb-sheep-best',b);document.getElementById('best').textContent='Best '+b}catch{}}
+function hud(){score_.textContent=score;sheep_.textContent=found;lives_.textContent=lives;level_.textContent=level}
+const score_=document.getElementById('score'),sheep_=document.getElementById('sheep'),lives_=document.getElementById('lives'),level_=document.getElementById('level');
+function canGo(e,d,isWolf){const nx=(e.x+d[0]+C)%C,ny=e.y+d[1];return isWolf?!wolfWall(nx,ny,e):!wall(nx,ny)}
+function step(e,dt,isWolf){
+  e.t+=dt*e.speed;
+  while(e.t>=1){e.t-=1;e.x=(e.x+e.d[0]+C)%C;e.y+=e.d[1];arrive(e,isWolf);if(!canGo(e,e.d,isWolf)){e.t=0;break}}
+  e.px=e.x+e.d[0]*e.t;e.py=e.y+e.d[1]*e.t;
+}
+function arrive(e,isWolf){
+  if(!isWolf){
+    const ch=grid[e.y][e.x];
+    if(ch==='.'){grid[e.y][e.x]=' ';dots--;score+=10;if(Math.random()<.5)Snd.blip()}
+    if(ch==='o'){grid[e.y][e.x]=' ';dots--;score+=50;scared=7;Snd.power();buzz(30)}
+    sheep.forEach(s=>{if(!s.got&&s.x===e.x&&s.y===e.y){s.got=true;found++;score+=200;Snd.win();buzz([15,30,15])}});
+    if(canGo(e,want,false))e.d=want;
+    hud();if(dots<=0)win();
+  }else{
+    if(e.leaving&&grid[e.y][e.x]!=='D'&&grid[e.y][e.x]!=='-')e.leaving=false;
+    const opts=[[1,0],[-1,0],[0,1],[0,-1]].filter(d=>!(d[0]===-e.d[0]&&d[1]===-e.d[1])&&canGo(e,d,true));
+    if(!opts.length){e.d=[-e.d[0],-e.d[1]];return}
+    const tx=e.leaving?10:player.x,ty=e.leaving?6:player.y;
+    const dist=d=>Math.hypot(e.x+d[0]-tx,e.y+d[1]-ty);
+    opts.sort((a,b)=>dist(a)-dist(b));
+    e.d=scared>0&&!e.leaving?opts[opts.length-1]:(Math.random()<.18?opts[Math.floor(Math.random()*opts.length)]:opts[0]);
+  }
+}
+function tick(now){
+  if(!running)return;const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(player.d[0]===0&&player.d[1]===0&&canGo(player,want,false))player.d=want;
+  if(player.t===0&&canGo(player,want,false))player.d=want;
+  if(player.t>0&&player.d[0]===-want[0]&&player.d[1]===-want[1]&&(want[0]||want[1])){player.x=(player.x+player.d[0]+C)%C;player.y+=player.d[1];player.t=1-player.t;player.d=want}
+  if(canGo(player,player.d,false)||player.t>0)step(player,dt,false);else{player.px=player.x;player.py=player.y}
+  if(scared>0)scared=Math.max(0,scared-dt);
+  wolves.forEach(w=>{if(w.wait>0){w.wait--;return}w.speed=(scared>0&&!w.leaving?player.speed*.55:player.speed*.82);step(w,dt,true);
+    if(Math.hypot(w.px-player.px,w.py-player.py)<.7){
+      if(scared>0&&!w.leaving){score+=100;Snd.good();w.x=w.home[0];w.y=w.home[1];w.px=w.x;w.py=w.y;w.t=0;w.leaving=true;w.wait=60;hud()}
+      else caught();}});
+  draw();if(running)requestAnimationFrame(tick);
+}
+function caught(){lives--;hud();running=false;Snd.bad();buzz([60,40,60]);saveBest();
+  if(lives<=0){show('Oh no!',`The wolves got you this time. You found ${found} sheep and scored ${score}. The Good Shepherd never gives up — try again!`,'Play again',()=>{score=0;lives=3;level=1;reset(true);go()})}
+  else show('Watch out!','A wolf caught you. Keep going, the sheep are still waiting.','Keep going',()=>{const keep=grid;const d=dots;const sh=sheep;const f=found;reset(false);grid=keep;dots=d;sheep=sh;found=f;hud();go()})}
+function win(){running=false;const bonus=found*100;score+=bonus;hud();Snd.win();confetti(found===3?160:80);saveBest();
+  show(found===3?'All sheep home!':'Maze cleared!',found===3?`“Rejoice with me; I have found my lost sheep.” Luke 15:6. Bonus +${bonus}!`:`You cleared the light but ${3-found} sheep are still lost. Bonus +${bonus}.`,'Next level',()=>{level++;reset(true);go()})}
+const ov=document.getElementById('ov');
+function show(h,p,b,fn){ov.hidden=false;ov.innerHTML=`<h2>${h}</h2><p>${p}</p><button class="btn" id="ovb">${b}</button>`;const btn=document.getElementById('ovb');btn.onclick=fn;btn.focus()}
+function go(){ov.hidden=true;running=true;last=performance.now();requestAnimationFrame(tick)}
+function draw(){
+  g.fillStyle='#081830';g.fillRect(0,0,CW,CH2);
+  for(let y=0;y<R;y++)for(let x=0;x<C;x++){const ch=grid[y][x],X=x*T,Y=y*T;
+    if(ch==='#'){g.fillStyle='#1f6b46';rr(X+2,Y+2,T-4,T-4,7);g.fillStyle='#2f8f5b';rr(X+4,Y+3,T-8,T-10,6)}
+    if(ch==='-'){g.fillStyle='#7a4a2b';g.fillRect(X,Y+T/2-3,T,6)}
+    if(ch==='.'){g.fillStyle='#ffe27a';g.beginPath();g.arc(X+T/2,Y+T/2,3.2,0,7);g.fill()}
+    if(ch==='o'){const p=6+Math.sin(performance.now()/180)*1.5;g.fillStyle='rgba(255,226,122,.25)';g.beginPath();g.arc(X+T/2,Y+T/2,p+6,0,7);g.fill();g.fillStyle='#f95600';g.beginPath();g.arc(X+T/2,Y+T/2,p,0,7);g.fill();g.fillStyle='#ffe27a';g.beginPath();g.arc(X+T/2,Y+T/2-2,3,0,7);g.fill()}}
+  sheep.forEach(s=>{if(s.got)return;drawSheep(s.x*T+T/2,s.y*T+T/2)});
+  wolves.forEach(w=>drawWolf(w.px*T+T/2,w.py*T+T/2,w));
+  drawShepherd(player.px*T+T/2,player.py*T+T/2);
+  if(scared>0){g.fillStyle='rgba(255,226,122,.9)';g.font='600 14px Fredoka, sans-serif';g.fillText('Lamp! '+Math.ceil(scared)+'s',8,CH2-8)}
+}
+function rr(x,y,w,h,r){g.beginPath();g.roundRect?g.roundRect(x,y,w,h,r):g.rect(x,y,w,h);g.fill()}
+function drawSheep(x,y){g.fillStyle='#f5f1e8';[[-5,-2],[5,-2],[0,-6],[-3,4],[4,4]].forEach(([a,b])=>{g.beginPath();g.arc(x+a,y+b,6,0,7);g.fill()});g.fillStyle='#333';g.beginPath();g.ellipse(x+9,y-1,4,5,0,0,7);g.fill()}
+function drawWolf(x,y,w){const sc=scared>0&&!w.leaving;g.fillStyle=sc?'#8fb3ff':w.c;
+  g.beginPath();g.moveTo(x-9,y-4);g.lineTo(x-6,y-12);g.lineTo(x-2,y-6);g.lineTo(x+2,y-6);g.lineTo(x+6,y-12);g.lineTo(x+9,y-4);g.lineTo(x+9,y+6);g.quadraticCurveTo(x,y+12,x-9,y+6);g.closePath();g.fill();
+  g.fillStyle=sc?'#1d3b7a':'#fff';g.beginPath();g.arc(x-4,y-1,2.4,0,7);g.arc(x+4,y-1,2.4,0,7);g.fill();g.fillStyle='#222';g.beginPath();g.arc(x,y+5,2,0,7);g.fill()}
+function drawShepherd(x,y){g.fillStyle='rgba(255,226,122,.18)';g.beginPath();g.arc(x,y,16,0,7);g.fill();
+  g.fillStyle='#c98a4b';g.beginPath();g.arc(x,y+2,9,0,7);g.fill();g.fillStyle='#f3c9a5';g.beginPath();g.arc(x,y-5,6,0,7);g.fill();
+  g.fillStyle='#e8e0cf';g.beginPath();g.arc(x,y-8,6.5,Math.PI,0);g.fill();
+  g.strokeStyle='#7a4a2b';g.lineWidth=2.5;g.beginPath();g.moveTo(x+11,y+10);g.lineTo(x+11,y-8);g.arc(x+7,y-8,4,0,Math.PI,true);g.stroke()}
+// controls
+const KEYS={ArrowUp:[0,-1],KeyW:[0,-1],ArrowDown:[0,1],KeyS:[0,1],ArrowLeft:[-1,0],KeyA:[-1,0],ArrowRight:[1,0],KeyD:[1,0]};
+addEventListener('keydown',e=>{if(KEYS[e.code]){want=KEYS[e.code];e.preventDefault()}});
+document.querySelectorAll('.pad button').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();want=b.dataset.d.split(',').map(Number)}));
+let sx,sy;cv.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY});
+cv.addEventListener('pointerup',e=>{const dx=e.clientX-sx,dy=e.clientY-sy;if(Math.max(Math.abs(dx),Math.abs(dy))<18)return;want=Math.abs(dx)>Math.abs(dy)?[Math.sign(dx),0]:[0,Math.sign(dy)]});
+document.getElementById('start').onclick=()=>{Snd.tap();go()};try{document.getElementById('best').textContent='Best '+(localStorage.getItem('rmb-sheep-best')||0)}catch{}
+reset(true);draw();
+</script>

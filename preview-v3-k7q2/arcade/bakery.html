@@ -1,0 +1,213 @@
+<!doctype html><html lang="en"><head><title>Favor Bakery</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+@font-face{font-family:FavorSans;src:url('/favor-sans-bold.otf')}@font-face{font-family:Agharti;src:url('/agharti-bold.ttf')}
+[hidden]{display:none!important}
+/* Layout: one-screen toy shop — order ticket on top, cake conveyor in the middle, chunky machine buttons below */
+:root{
+  --plum:#3b1361; --grape:#6d2fb3; --lilac:#c9a7f5; --cream:#fff7ec; --sun:#fbc92c; --mint:#5fd3a6; --ink:#1d0a33; --tomato:#f95600;
+  --display:Agharti,Impact,sans-serif; --body:FavorSans,'Trebuchet MS',system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--plum);color:var(--cream);font-family:var(--body);margin:0;overflow-x:hidden}
+.wrap{max-width:980px;margin:0 auto;padding-block:16px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:400;letter-spacing:1px;text-transform:uppercase;font-size:clamp(34px,6vw,56px);line-height:.9;margin:0;color:var(--sun);text-wrap:balance}
+.draft{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;background:var(--grape);padding:6px 12px;border-radius:999px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tabs button{font:600 16px var(--body);border:0;border-radius:14px;padding:10px 16px;background:var(--grape);color:var(--cream);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--sun);color:var(--ink)}
+.tabs button:disabled{opacity:.45;cursor:default}
+button:focus-visible{outline:3px solid var(--mint);outline-offset:2px}
+.hud{display:flex;gap:10px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.pill{background:rgba(255,255,255,.1);border-radius:12px;padding:6px 12px;font-weight:600}
+.pill b{color:var(--sun)}
+.order{display:flex;gap:16px;align-items:center;background:var(--cream);color:var(--ink);border-radius:22px;padding:14px 18px;flex-wrap:wrap}
+.order .who{flex:1;min-width:200px}
+.order .who small{display:block;font-weight:600;color:var(--grape);text-transform:uppercase;letter-spacing:.08em;font-size:12px}
+.order .who strong{font-size:22px;display:block;margin:2px 0}
+.order .who span{font-size:15px}
+.ticket{width:120px;height:110px;flex:none;background:#f1e6ff;border-radius:16px;display:flex;align-items:center;justify-content:center}
+.belt{position:relative;height:230px;background:linear-gradient(var(--grape),#5a2596);border-radius:26px;overflow:hidden}
+.stations{position:absolute;inset:12px 12px auto;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.st{background:rgba(255,255,255,.12);border-radius:12px;text-align:center;font-weight:600;font-size:14px;padding:6px 4px}
+.st.on{background:var(--sun);color:var(--ink)}
+.rail{position:absolute;left:0;right:0;bottom:26px;height:18px;background:repeating-linear-gradient(90deg,#2a0d47 0 18px,#43186e 18px 36px);animation:roll 1s linear infinite}
+@keyframes roll{to{background-position:36px 0}}
+@media (prefers-reduced-motion:reduce){.rail{animation:none}.cake{transition:none!important}}
+.cake{position:absolute;bottom:40px;width:150px;height:140px;transition:left .7s cubic-bezier(.5,0,.3,1)}
+.machine{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.opt{font:600 17px var(--body);border:0;border-radius:18px;padding:12px 10px;background:var(--cream);color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 6px 0 #a78bd0;transition:transform .08s}
+.opt:active{transform:translateY(4px);box-shadow:0 2px 0 #a78bd0}
+.opt svg{width:88px;height:70px}
+.step-title{font-family:var(--display);font-weight:400;letter-spacing:1px;font-size:28px;text-transform:uppercase;margin:4px 0 0}
+.toast{min-height:52px;border-radius:16px;padding:12px 16px;font-size:17px;font-weight:600;background:rgba(255,255,255,.08)}
+.toast.good{background:var(--mint);color:var(--ink)}
+.toast.bad{background:var(--tomato);color:#fff}
+.timer{height:12px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden}.timer span{display:block;height:100%;width:100%;background:var(--mint);transition:width .2s linear}
+.next{font:700 18px var(--body);border:0;border-radius:16px;padding:12px 20px;background:var(--sun);color:var(--ink);cursor:pointer}
+/* pairs */
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:560px;width:100%;margin:0 auto}
+.card{aspect-ratio:1;max-width:100%;border:0;border-radius:18px;background:var(--grape);cursor:pointer;display:flex;align-items:center;justify-content:center;font:700 15px var(--body);color:var(--ink);padding:6px;text-align:center}
+.card .face{display:none;flex-direction:column;align-items:center;gap:4px}
+.card.up,.card.done{background:var(--cream)}
+.card.up .face,.card.done .face{display:flex}
+.card.done{opacity:.55}
+.card .back{width:40%;aspect-ratio:1;border-radius:50%;background:var(--lilac);opacity:.6}
+.card.up .back,.card.done .back{display:none}
+.card svg{width:70%;height:auto}
+.note{font-size:14px;color:var(--lilac);line-height:1.5;max-width:65ch}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Favor Bakery</h1>
+    <span class="draft" id="lvl">Level 1 · Baker</span>
+  </header>
+  <div class="tabs" role="tablist">
+    <button id="tab-bake" role="tab" aria-selected="true">Cake Shop</button>
+    <button id="tab-pairs" role="tab" aria-selected="false">Bible Pairs</button>
+    <button id="tab-soon" role="tab" aria-selected="false" disabled>Dress-Up Corner · soon</button>
+  </div>
+
+  <section id="bake">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="hud"><span class="pill">Cakes <b id="made">0</b></span><span class="pill">Coins <b id="coins">0</b></span><span class="pill">Streak <b id="streak">0</b></span></div>
+      <div class="order">
+        <div class="ticket" id="ticket"></div>
+        <div class="who"><small>New order</small><strong id="who">…</strong><span id="why">…</span></div>
+      </div>
+      <div class="timer" id="timerWrap" hidden><span id="timerBar"></span></div>
+      <div class="belt">
+        <div class="stations"><div class="st" id="s0">1 · Shape</div><div class="st" id="s1">2 · Batter</div><div class="st" id="s2">3 · Frosting</div><div class="st" id="s3">4 · Topping</div></div>
+        <div class="rail"></div>
+        <svg class="cake" id="cake" viewBox="0 0 150 140"></svg>
+      </div>
+      <p class="step-title" id="stepTitle">Pick a shape</p>
+      <div class="machine" id="machine"></div>
+      <div class="toast" id="toast">Look at the order ticket, then build the same cake as it rolls down the line.</div>
+      <div><button class="next" id="next" hidden>Next order →</button></div>
+    </div>
+  </section>
+
+  <section id="pairs" hidden>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="hud"><span class="pill">Turns <b id="turns">0</b></span><span class="pill">Pairs <b id="found">0</b>/8</span></div>
+      <div class="board" id="board"></div>
+      <div class="toast" id="ptoast">Flip two cards. Match each Bible story with its picture.</div>
+      <div><button class="next" id="reshuffle">Shuffle again</button></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const Snd=(()=>{let ac;const ok=()=>{try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();return ac}catch{return null}};
+ const tone=(f,d=.09,type='sine',v=.12,slide=0)=>{const a=ok();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,a.currentTime);if(slide)o.frequency.exponentialRampToValueAtTime(f*slide,a.currentTime+d);g.gain.setValueAtTime(v,a.currentTime);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d);o.connect(g).connect(a.destination);o.start();o.stop(a.currentTime+d)};
+ return{tap:()=>tone(520,.06,'triangle',.08),good:()=>{tone(660,.1,'triangle');setTimeout(()=>tone(880,.14,'triangle'),90)},bad:()=>tone(220,.22,'sawtooth',.06,.6),win:()=>[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.16,'triangle',.1),i*110)),blip:()=>tone(900,.03,'square',.03),power:()=>tone(300,.4,'sine',.12,3)}})();
+const buzz=p=>{try{navigator.vibrate?.(p)}catch{}};
+const Q=new URLSearchParams(location.search),CH=Math.max(1,Math.min(28,Number(Q.get('ch'))||1)),AGE=Number(Q.get('age'))||8,NAME=(Q.get('name')||'').slice(0,20);
+function confetti(n=120){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const c=document.createElement('canvas'),d=Math.min(2,devicePixelRatio||1);c.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:9';document.body.append(c);const w=c.width=innerWidth*d,h=c.height=innerHeight*d,x=c.getContext('2d'),cols=['#faa731','#c86354','#59877d','#a28fbc','#fbe8ca','#ffe25a'];const ps=Array.from({length:n},()=>({x:w/2+(Math.random()-.5)*w*.3,y:h*.4,vx:(Math.random()-.5)*26*d,vy:(-Math.random()*22-8)*d,r:(4+Math.random()*6)*d,a:Math.random()*6,va:(Math.random()-.5)*.4,c:cols[Math.floor(Math.random()*6)]}));let t=0;const k=()=>{x.clearRect(0,0,w,h);t++;ps.forEach(p=>{p.vy+=.7*d;p.vx*=.985;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillStyle=p.c;x.fillRect(-p.r,-p.r/2,p.r*2,p.r);x.restore()});if(t<140)requestAnimationFrame(k);else c.remove()};k()}
+
+const $=id=>document.getElementById(id);
+const SHAPES=['round','square','heart'], BATTERS={vanilla:'#f6dca6',chocolate:'#7a4a2b',strawberry:'#f59bb5'},
+ FROST={white:'#ffffff',lilac:'#c9a7f5',mint:'#9fe8c8'}, TOPS=['cherry','star','candle'];
+const CUSTOMERS=[
+ ['Noah','is celebrating that the rain finally stopped! (Genesis 8)'],
+ ['Mary & Martha','are having Jesus over for dinner. (Luke 10)'],
+ ['The father','is throwing a party because his son came home. (Luke 15)'],
+ ['Zacchaeus','wants to say sorry and share with everyone. (Luke 19)'],
+ ['Ruth & Naomi','are thanking God for the harvest. (Ruth 2)'],
+ ['The wedding at Cana','needs a cake to go with the new wine! (John 2)'],
+ ['Hannah','is thanking God for baby Samuel. (1 Samuel 1)']];
+function cakeSVG(c,scale=1){
+  if(!c.shape) return `<rect x="20" y="118" width="110" height="10" rx="5" fill="#ece2fa"/>`;
+  const b=BATTERS[c.batter]||'#e9ddf7', f=c.frost?FROST[c.frost]:null;
+  let body='';
+  if(c.shape==='round') body=`<ellipse cx="75" cy="112" rx="55" ry="14" fill="${shade(b)}"/><rect x="20" y="62" width="110" height="50" fill="${b}"/><ellipse cx="75" cy="62" rx="55" ry="14" fill="${f||lighten(b)}"/>${f?`<path d="M20 62 q8 16 16 0 q8 16 16 0 q8 16 16 0 q8 16 16 0 q8 16 16 0 q8 16 16 0 q7 14 14 0" fill="${f}"/>`:''}`;
+  if(c.shape==='square') body=`<rect x="22" y="58" width="106" height="60" rx="6" fill="${b}"/><rect x="22" y="58" width="106" height="${f?16:6}" rx="6" fill="${f||lighten(b)}"/>${f?`<path d="M22 72 q9 14 18 0 q9 14 18 0 q9 14 18 0 q9 14 18 0 q9 14 18 0 q8 12 16 0" fill="${f}"/>`:''}`;
+  if(c.shape==='heart') body=`<path d="M75 122 C30 96 18 72 34 56 C48 44 66 50 75 64 C84 50 102 44 116 56 C132 72 120 96 75 122Z" fill="${b}"/>${f?`<path d="M75 92 C46 78 38 66 46 58 C55 51 67 55 75 66 C83 55 95 51 104 58 C112 66 104 78 75 92Z" fill="${f}"/>`:''}`;
+  let top='';
+  const ty=c.shape==='heart'?54:c.shape==='square'?52:46;
+  if(c.top==='cherry') top=`<path d="M75 ${ty-10} q6 -14 14 -16" stroke="#3b7a2a" stroke-width="3" fill="none"/><circle cx="75" cy="${ty}" r="10" fill="#e3263b"/><circle cx="71" cy="${ty-3}" r="3" fill="#fff" opacity=".7"/>`;
+  if(c.top==='star') top=`<polygon points="75,${ty-16} 80,${ty-4} 93,${ty-4} 83,${ty+4} 87,${ty+16} 75,${ty+8} 63,${ty+16} 67,${ty+4} 57,${ty-4} 70,${ty-4}" fill="#fbc92c" stroke="#d69a00" stroke-width="2"/>`;
+  if(c.top==='candle') top=`<rect x="70" y="${ty-26}" width="10" height="28" rx="3" fill="#7fb6ff"/><path d="M75 ${ty-40} q8 8 0 14 q-8 -6 0 -14Z" fill="#ff9a1f"/>`;
+  return `<rect x="16" y="118" width="118" height="10" rx="5" fill="#ece2fa"/>${body}${top}`;
+}
+function shade(h){return mix(h,'#000000',.18)} function lighten(h){return mix(h,'#ffffff',.25)}
+function mix(a,b,t){const p=x=>[1,3,5].map(i=>parseInt(x.slice(i,i+2),16));const A=p(a),B=p(b);return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('')}
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const CH_ORDER={1:['Joseph & Mary','are celebrating the birth of baby Jesus! (Matthew 1)'],2:['The wise men','want a cake fit for a newborn King. (Matthew 2)'],4:['Peter & Andrew','just left their nets to follow Jesus. (Matthew 4)'],5:['The crowd on the mountain','listened to Jesus all day. (Matthew 5)'],8:['The disciples','made it through the storm! (Matthew 8)'],9:['Matthew','is throwing a dinner party for Jesus. (Matthew 9)'],13:['The farmer','had a great harvest from good soil. (Matthew 13)'],14:['The 5,000','are still hungry for more! (Matthew 14)'],18:['The shepherd','found his lost sheep! (Matthew 18)'],19:['The children','came to see Jesus. (Matthew 19)'],21:['Jerusalem','is shouting Hosanna! (Matthew 21)'],22:['The king','is having a wedding feast. (Matthew 22)'],25:['The bridesmaids','are ready for the wedding. (Matthew 25)'],26:['The disciples','are remembering the Last Supper. (Matthew 26)'],28:['Everyone','is celebrating: Jesus is risen! (Matthew 28)']};
+let firstOrder=true,level=1,timer=null,timeLeft=0;
+let order,cake,step,stats={made:0,coins:0,streak:0};
+const STEPS=[['Pick a shape','shape',SHAPES],['Pour the batter','batter',Object.keys(BATTERS)],['Add frosting','frost',Object.keys(FROST)],['Pick a topping','top',TOPS]];
+function newOrder(){
+  order={shape:rnd(SHAPES),batter:rnd(Object.keys(BATTERS)),frost:rnd(Object.keys(FROST)),top:rnd(TOPS)};
+  let pick=rnd(CUSTOMERS);if(firstOrder){firstOrder=false;const near=Object.keys(CH_ORDER).map(Number).filter(n=>n<=CH).pop();if(near)pick=CH_ORDER[near]}
+  const [w,y]=pick; $('who').textContent=w; $('why').textContent=y;
+  level=1+Math.floor(stats.made/3);$('lvl').textContent=`Level ${level} · ${['Baker','Head Baker','Master Baker','Royal Baker'][Math.min(3,level-1)]}`;
+  clearInterval(timer);$('timerWrap').hidden=level<2;if(level>=2){const max=Math.max(9,24-level*3);timeLeft=max;$('timerBar').style.width='100%';timer=setInterval(()=>{timeLeft-=.2;$('timerBar').style.width=Math.max(0,timeLeft/max*100)+'%';$('timerBar').style.background=timeLeft<4?'#f95600':'';if(timeLeft<=0){clearInterval(timer);if(step<=3){step=4;render();finish(true)}}},200)}
+  $('ticket').innerHTML=`<svg viewBox="0 0 150 140" width="110" height="100">${cakeSVG(order)}</svg>`;
+  cake={};step=0;$('next').hidden=true;$('toast').className='toast';$('toast').textContent='Build the same cake as the ticket.';
+  render();
+}
+function render(){
+  const belt=document.querySelector('.belt').clientWidth, slot=(belt-24)/4;
+  const el=$('cake'); el.innerHTML=cakeSVG(cake); el.style.left=Math.max(8,12+slot*Math.min(step,3)+slot/2-75)+'px';
+  for(let i=0;i<4;i++)$('s'+i).classList.toggle('on',i===step);
+  const m=$('machine'); m.innerHTML='';
+  if(step>3){$('stepTitle').textContent='Ding! Cake is ready';return}
+  const [title,key,opts]=STEPS[step]; $('stepTitle').textContent=title;
+  opts.forEach(o=>{const b=document.createElement('button');b.className='opt';
+    const prev={...cake,[key]:o};
+    b.innerHTML=`<svg viewBox="0 0 150 140">${cakeSVG(prev)}</svg>${o[0].toUpperCase()+o.slice(1)}`;
+    b.onclick=()=>{cake[key]=o;step++;Snd.tap();buzz(8);render();if(step>3)finish()};m.appendChild(b)});
+}
+function finish(late){
+  clearInterval(timer);
+  const misses=['shape','batter','frost','top'].filter(k=>cake[k]!==order[k]);
+  const t=$('toast');
+  if(late){stats.streak=0;t.className='toast bad';t.textContent='Out of time! The customer is still waiting. Try a faster hand next time.';Snd.bad();buzz([40,50,40])}
+  else if(!misses.length){stats.made++;stats.streak++;stats.coins+=10+stats.streak*2+(level>1?Math.ceil(timeLeft):0);t.className='toast good';Snd.win();buzz([15,30,15]);confetti(stats.streak>=3?140:80);
+    t.textContent=`Perfect! ${$('who').textContent} loved it. "Taste and see that the Lord is good." Psalm 34:8`;}
+  else{stats.streak=0;stats.coins+=3;t.className='toast bad';Snd.bad();buzz([40,50,40]);t.textContent=`So close! Check the ${misses.map(k=>({shape:'shape',batter:'batter',frost:'frosting',top:'topping'})[k]).join(' and ')} next time.`}
+  $('made').textContent=stats.made;$('coins').textContent=stats.coins;$('streak').textContent=stats.streak;$('next').hidden=false;
+}
+$('next').onclick=newOrder; addEventListener('resize',render);
+
+/* pairs */
+const PAIRS=[['Noah’s ark','ark'],['David & Goliath','sling'],['Jonah','whale'],['Baby Moses','basket'],['Jesus feeds 5,000','bread'],['Lost sheep','sheep'],['Star of Bethlehem','star'],['Jesus calms the storm','boat']];
+function icon(k){return({
+ ark:'<path d="M10 60 h80 l-12 18 h-56z" fill="#9b5b2e"/><rect x="34" y="38" width="32" height="22" fill="#c98a4b"/><path d="M30 38 l20 -14 l20 14z" fill="#7a4220"/>',
+ sling:'<circle cx="62" cy="34" r="10" fill="#9aa0a6"/><path d="M20 80 q20 -40 34 -46" stroke="#7a4a2b" stroke-width="5" fill="none"/>',
+ whale:'<path d="M14 56 q30 -34 66 -6 l14 -12 l-4 22 l4 20 l-14 -12 q-36 26 -66 -12z" fill="#3a7bd5"/><circle cx="34" cy="50" r="3" fill="#fff"/>',
+ basket:'<path d="M18 52 h64 l-8 24 h-48z" fill="#d6a253"/><circle cx="50" cy="46" r="10" fill="#f3c9a5"/>',
+ bread:'<ellipse cx="38" cy="58" rx="22" ry="14" fill="#d99a4e"/><path d="M60 52 l24 -6 l-2 18 l-24 4z" fill="#6aa3c8"/>',
+ sheep:'<circle cx="46" cy="52" r="20" fill="#f1f1f1" stroke="#ddd"/><circle cx="70" cy="46" r="10" fill="#444"/>',
+ star:'<polygon points="50,14 59,40 86,40 64,56 72,82 50,66 28,82 36,56 14,40 41,40" fill="#fbc92c"/>',
+ boat:'<path d="M14 62 h72 l-10 14 h-52z" fill="#7a4a2b"/><path d="M50 20 v40 h-26z" fill="#fff"/><path d="M8 82 q12 -8 24 0 q12 8 24 0 q12 -8 24 0 q12 8 18 2" stroke="#3a7bd5" stroke-width="4" fill="none"/>'
+})[k]}
+let flipped=[],turns=0,found=0,lock=false;
+function deal(){
+  const deck=[];PAIRS.forEach(([t,k],i)=>{deck.push({i,label:t,k,kind:'word'},{i,label:'',k,kind:'pic'})});
+  deck.sort(()=>Math.random()-.5);
+  const b=$('board');b.innerHTML='';flipped=[];turns=0;found=0;$('turns').textContent=0;$('found').textContent=0;
+  $('ptoast').textContent='Flip two cards. Match each Bible story with its picture.';
+  deck.forEach(c=>{const el=document.createElement('button');el.className='card';el.setAttribute('aria-label','Hidden card');
+    el.innerHTML=`<span class="back"></span><span class="face">${c.kind==='pic'?`<svg viewBox="0 0 100 100">${icon(c.k)}</svg>`:c.label}</span>`;
+    el.onclick=()=>flip(el,c);b.appendChild(el)});
+}
+function flip(el,c){
+  if(lock||el.classList.contains('up')||el.classList.contains('done'))return;
+  Snd.tap();el.classList.add('up');el.setAttribute('aria-label',c.label||c.k);flipped.push([el,c]);
+  if(flipped.length===2){turns++;$('turns').textContent=turns;const [[a,ca],[b,cb]]=flipped;
+    if(ca.i===cb.i){a.classList.replace('up','done');b.classList.replace('up','done');found++;$('found').textContent=found;flipped=[];Snd.good();buzz(15);if(found===8){Snd.win();confetti(140)}
+      $('ptoast').textContent=found===8?`All 8 matched in ${turns} turns! Which story is your favorite?`:`Match! ${PAIRS[ca.i][0]}.`;}
+    else{lock=true;setTimeout(()=>{a.classList.remove('up');b.classList.remove('up');flipped=[];lock=false},900)}}
+}
+$('reshuffle').onclick=deal;
+
+function show(t){['bake','pairs'].forEach(s=>{$(s).hidden=s!==t;$('tab-'+s).setAttribute('aria-selected',s===t)});if(t==='bake')render()}
+$('tab-bake').onclick=()=>show('bake');$('tab-pairs').onclick=()=>show('pairs');
+newOrder();deal();
+</script>
