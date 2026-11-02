@@ -1,4 +1,4 @@
-/* Read My Bible v3 — stars, Arcade, sticker book, memory verse, Sunday code. Uses the app's brand palette. */
+/* Read My Bible v3 — stars, Arcade, sticker book, memory verse. Uses the app's brand palette. */
 :root{--v3-gold:#faa731;--v3-coral:#c86354;--v3-ink:#29464a;--v3-cream:#fbe8ca;--v3-paper:#fff8eb;--v3-green:#59877d;--v3-lilac:#a28fbc;--v3-night:#0b1f3a;--v3-grape:#5b2a8c}
 
 /* Light token */
@@ -8,7 +8,7 @@
 
 /* Dashboard row */
 .v3-row{padding-top:18px}
-.v3-grid{display:grid;grid-template-columns:1.35fr 1fr 1fr 1fr;gap:16px;max-width:1300px;margin:0 auto}
+.v3-grid{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:16px;max-width:1300px;margin:0 auto}
 .v3-grid .card{gap:8px}
 .v3-grid .card p{margin:0;color:#6e7775;line-height:1.45;font-size:14px}
 .v3-grid .card h3{margin:2px 0}

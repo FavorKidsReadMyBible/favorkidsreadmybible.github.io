@@ -1,5 +1,5 @@
 // Read My Bible v3 — harder quizzes by age, stars, review, Light tokens, Arcade, sticker book,
-// memory verse of the week, Sunday code word, grace-day streak, celebrations and HD Sky Run.
+// memory verse of the week, grace-day streak, celebrations and HD Sky Run.
 // Loaded after app.js and game.js. It wraps a few of their functions; saved progress is kept as is.
 (() => {
   const V3_ON = true;
@@ -223,17 +223,6 @@
     $('#memReset').onclick = () => { picked = []; draw(); };
   }
 
-  // ---------- Sunday code word ----------
-  function showSunday() {
-    const p = profile(), wk = sundayOf(todayKey()), d = v3(p), got = d.sunday[wk];
-    openModal(`${header('SUNDAY CODE WORD', 'Heard it at Favor Kids?')}<p>Every Sunday at Favor Kids we share a secret code word. Type it here to unlock a Sunday treasure!</p>${got ? `<div class="notice">You already found this week’s code. See you next Sunday!</div>` : `<label class="field">Code word<input id="sunCode" maxlength="24" autocomplete="off" autocapitalize="characters" placeholder="Type the code word"></label><p id="sunFb" class="quiz-feedback"></p><button id="sunGo" class="button primary wide">Unlock</button>`}`);
-    $('#sunGo')?.addEventListener('click', () => {
-      const code = $('#sunCode').value, want = V3_SUNDAY[wk];
-      if (want && V3_hash(code) === want) { d.sunday[wk] = true; save(); addLight(p, 5); sfx('bonus'); buzz([20, 30, 20]); confetti(180); $('#sunFb').innerHTML = '⭐ You found it! +5 Light and a Sunday badge.'; $('#sunGo').remove(); render(); }
-      else { sfx('wrong'); buzz(40); $('#sunFb').textContent = want ? 'That’s not this week’s word. Ask your Favor Kids leader!' : 'There’s no code for this week yet. Check back on Sunday!'; }
-    });
-  }
-
   // ---------- Arcade ----------
   const GAMES = [
     { id: 'sky', name: 'Sky Run', cost: 0, about: 'Fly your explorer, dodge gears and catch the glowing Bible.' },
@@ -244,7 +233,7 @@
     const p = profile(); if (!p) return; const d = v3(p), open = canPlay(p);
     openModal(`${header('ARCADE', open ? 'Pick a game!' : 'Read first to play')}<div class="v3-arcade-top"><span class="v3-light-pill"><span class="v3-light-ico"></span><b>${d.light}</b> Light</span><small>${open ? 'Sky Run is free today. The other games use 1 Light each.' : 'Read today’s chapter and pass the quiz to open the Arcade.'}</small></div>
       <div class="v3-games">${GAMES.map(g => `<button class="v3-game ${g.id}" data-g="${g.id}" ${!open || d.light < g.cost ? 'disabled' : ''}><span class="v3-game-art"></span><span class="v3-game-txt"><b>${g.name}</b><small>${g.about}</small></span><span class="v3-cost">${g.cost ? `<span class="v3-light-ico"></span>${g.cost}` : 'FREE'}</span></button>`).join('')}</div>
-      ${open ? '' : `<button id="v3GoRead" class="button primary wide">Read ${esc(curBook(p).name)} ${todayChapter(p)} to unlock</button>`}${open && d.light < 1 ? '<p class="fineprint">Earn Light by passing quizzes, the Bible + School bonus, the memory verse and the Sunday code.</p>' : ''}`);
+      ${open ? '' : `<button id="v3GoRead" class="button primary wide">Read ${esc(curBook(p).name)} ${todayChapter(p)} to unlock</button>`}${open && d.light < 1 ? '<p class="fineprint">Earn Light by passing quizzes, the Bible + School bonus, the memory verse and awards.</p>' : ''}`);
     $('#modalCard').querySelectorAll('[data-g]').forEach(b => b.onclick = () => playGame(b.dataset.g));
     $('#v3GoRead')?.addEventListener('click', () => showReading(todayChapter(p)));
   }
@@ -295,8 +284,6 @@
     { id: 'memory4', cat: 'heart', ico: '📜', name: 'Verse Keeper', how: 'Learn 4 memory verses', test: (p, d) => count(d.memory) >= 4 },
     { id: 'heart1', cat: 'heart', ico: '💌', name: 'Open Heart', how: 'Answer a Heart Moment', test: p => (p.journal || []).length >= 1 },
     { id: 'pray5', cat: 'heart', ico: '🙏', name: 'Prayer Warrior', how: 'Pray for others 5 times', test: p => prayers(p) >= 5 },
-    { id: 'sunday1', cat: 'heart', ico: '⛪', name: 'Sunday Sleuth', how: 'Find a Sunday code word', test: (p, d) => count(d.sunday) >= 1 },
-    { id: 'sunday4', cat: 'heart', ico: '🔑', name: 'Never Miss a Sunday', how: 'Find 4 Sunday code words', test: (p, d) => count(d.sunday) >= 4 },
     // play
     { id: 'mansion', cat: 'play', ico: '🏰', name: 'Mansion Builder', how: 'Upgrade your home to the mansion', test: p => (p.homeStage || 0) >= 3 },
     { id: 'shine', cat: 'play', ico: '🕯️', name: 'Shining Light', how: 'Earn 50 Light', test: (p, d) => d.lifetime >= 50 },
@@ -354,12 +341,11 @@
       <article class="card v3-arcade-card"><div class="panel-kicker">ARCADE</div><div class="v3-arcade-head"><h3>${open ? 'Pick a game!' : 'Read first, then play'}</h3><span class="v3-light-pill" title="Light you earned by reading"><span class="v3-light-ico"></span><b>${d.light}</b></span></div><div class="v3-mini-games">${GAMES.map(g => `<span class="v3-mini ${g.id}" title="${g.name}"></span>`).join('')}</div><p>${open ? 'Sky Run is free today. Favor Bakery and Lost Sheep Dash use 1 Light.' : 'Read today’s chapter and pass the quiz. Every quiz earns Light for the Arcade.'}</p><button id="v3ArcadeBtn" class="button primary wide v3-enter">${ENTER}</button></article>
       <article class="card v3-sticker-card"><div class="panel-kicker">STICKER BOOK</div><h3>${B.name} · ${bd.length} / ${B.n}</h3><div class="v3-strip" style="grid-template-columns:repeat(${Math.ceil(B.n / 2)},1fr)">${Array.from({ length: B.n }, (_, i) => `<i class="${completed(p, i + 1) ? 'on' : ''} ${d.stars[sKey(B.id, i + 1)] === 3 ? 'gold' : ''}"></i>`).join('')}</div><p>${total} stars so far. Get every answer right for 3 stars!</p><button id="v3StickBtn" class="button secondary wide">Open my sticker book</button></article>
       <article class="card v3-mem-card"><div class="panel-kicker">MEMORY VERSE · THIS WEEK</div><h3>${m.ref}</h3><p class="v3-mem-text">“${esc(m.text)}”</p><button id="v3MemBtn" class="button secondary wide">${d.memory[m.week] ? '✓ Learned! Practice again' : 'Learn it · +3 Light'}</button></article>
-      <article class="card v3-sun-card"><div class="panel-kicker">SUNDAY CODE</div><h3>${d.sunday[wk] ? 'Found it! ✓' : 'Heard the code word?'}</h3><p>${d.sunday[wk] ? 'You found this week’s Sunday treasure.' : 'Listen at Favor Kids on Sunday for the secret word.'}</p><button id="v3SunBtn" class="button secondary wide" ${d.sunday[wk] ? 'disabled' : ''}>${d.sunday[wk] ? 'See you Sunday' : 'Enter the code · +5 Light'}</button></article>
       <article class="card v3-awards-card"><div class="v3-aw-top"><div><div class="panel-kicker">MY AWARDS</div><h3>${aw.length} of ${AWARDS.length} earned</h3></div><button id="v3AwBtn" class="button secondary">See all awards</button></div><div class="v3-aw-row">${aw.length ? aw.slice(-8).reverse().map(a => `<span class="v3-badge" style="--c:${CAT[a.cat][1]}" title="${esc(a.name)}">${a.ico}</span>`).join('') : '<p>Read your first chapter to earn your first award!</p>'}${nextUp ? `<span class="v3-aw-next">Next: <b>${esc(nextUp.name)}</b> · ${esc(nextUp.how)}</span>` : ''}</div></article>
     </div>`;
     if (rereading(p) && matthewDone(p) && BOOKS.some(b => bookDone(p, b.id).length < b.n)) { const nb = document.createElement('div'); nb.className = 'v3-next-book'; nb.innerHTML = `<div><b>You finished ${B.name}! 🎉</b><small>Choose your next book: ${BOOKS.filter(b => bookDone(p, b.id).length < b.n).map(b => b.name).join(', ')}</small></div><button class="button primary">Choose a book</button>`; nb.querySelector('button').onclick = showChapters; row.prepend(nb); }
     $('#v3ArcadeBtn').onclick = showArcade;
-    $('#v3StickBtn').onclick = showStickers; $('#v3MemBtn').onclick = showMemory; $('#v3SunBtn').onclick = showSunday; $('#v3AwBtn').onclick = showAwards;
+    $('#v3StickBtn').onclick = showStickers; $('#v3MemBtn').onclick = showMemory; $('#v3AwBtn').onclick = showAwards;
     // The Sky Run card now leads into the Arcade
     { const pb = $('#playButton'); pb.innerHTML = ENTER; pb.classList.add('v3-enter'); pb.disabled = false; pb.onclick = showArcade; }
     $('#gameDescription').textContent = open ? 'All the games are inside! Sky Run is free today. Use Light for the others.' : 'Read today’s chapter to unlock the games inside.';
