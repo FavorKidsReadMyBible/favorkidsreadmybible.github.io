@@ -1,0 +1,157 @@
+<!doctype html><html lang="en"><head><title>Jericho Run</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="robots" content="noindex, nofollow">
+<style>
+@font-face{font-family:FavorSans;src:url('/favor-sans-bold.otf')}@font-face{font-family:Agharti;src:url('/agharti-bold.ttf')}
+[hidden]{display:none!important}
+:root{--cream:#fbe8ca;--paper:#fff8eb;--coral:#c86354;--gold:#faa731;--gold2:#d9861a;--green:#59877d;--ink:#29464a;--display:Agharti,Impact,sans-serif;--body:FavorSans,'Trebuchet MS',system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#29464a;overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:none}
+body{font-family:var(--body);color:var(--ink);display:flex;align-items:center;justify-content:center}
+.stage{position:relative;height:100%;max-height:100dvh;aspect-ratio:9/16;max-width:100vw}
+canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;left:10px;right:10px;top:max(10px,env(safe-area-inset-top));display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.pill{background:rgba(255,248,235,.92);border-radius:14px;padding:6px 12px;font-weight:700;box-shadow:0 3px 0 #0002;font-variant-numeric:tabular-nums}
+.pill b{color:var(--coral)}
+.pow{position:absolute;left:10px;top:calc(max(10px,env(safe-area-inset-top)) + 44px);display:flex;gap:6px;pointer-events:none}
+.pow span{background:rgba(41,70,74,.85);color:#ffd98a;border-radius:12px;padding:4px 10px;font-weight:700;font-size:13px}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;background:rgba(41,70,74,.84);color:#fff;padding:24px}
+.overlay small{letter-spacing:.16em;font-weight:700;color:#a8dcc4}
+.overlay h2{font:400 clamp(44px,12vw,72px)/.9 var(--display);text-transform:uppercase;margin:0;color:var(--gold);text-shadow:0 4px 0 #a75f12}
+.overlay p{margin:0;max-width:34ch;line-height:1.45}
+.keys{display:grid;grid-template-columns:auto auto;gap:6px 14px;font-size:14px;text-align:left;background:rgba(255,255,255,.1);border-radius:14px;padding:10px 14px}
+.keys b{color:#ffd98a}
+.btn{font:700 20px var(--body);border:0;border-radius:16px;padding:13px 30px;background:var(--gold);color:var(--ink);cursor:pointer;box-shadow:0 5px 0 var(--gold2)}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--gold2)}
+.toast{position:absolute;left:50%;top:22%;transform:translateX(-50%);background:var(--paper);border-radius:14px;padding:8px 14px;font-weight:700;box-shadow:0 4px 0 #0002;white-space:nowrap;pointer-events:none;transition:opacity .3s}
+</style></head><body>
+<div class="stage" id="stage">
+  <canvas id="c" aria-label="Running game: switch lanes, jump and slide to collect gems in Jericho"></canvas>
+  <div class="hud"><span class="pill">Gems <b id="gems">0</b></span><span class="pill"><b id="dist">0</b> m</span><span class="pill">Best <b id="best">0</b></span></div>
+  <div class="pow" id="pow"></div>
+  <div class="toast" id="toast" style="opacity:0"></div>
+  <div class="overlay" id="ov">
+    <small>KIDS ARCADE · DRAFT</small>
+    <h2>Jericho Run</h2>
+    <p>Run through the streets of Jericho! Dodge carts, jump over jars, slide under beams and grab every gem.</p>
+    <div class="keys"><span><b>Swipe ← →</b></span><span>change lanes</span><span><b>Swipe ↑</b></span><span>jump</span><span><b>Swipe ↓</b></span><span>slide</span><span><b>Keyboard</b></span><span>arrow keys or WASD</span></div>
+    <button class="btn" id="go">Run!</button>
+  </div>
+</div>
+<script>
+const Snd=(()=>{let ac;const ok=()=>{try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();return ac}catch{return null}};
+ const tone=(f,d=.08,type='sine',v=.08,slide=0)=>{const a=ok();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,a.currentTime);if(slide)o.frequency.exponentialRampToValueAtTime(f*slide,a.currentTime+d);g.gain.setValueAtTime(v,a.currentTime);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d);o.connect(g).connect(a.destination);o.start();o.stop(a.currentTime+d)};
+ return{gem:()=>tone(1100+Math.random()*200,.06,'triangle',.05),jump:()=>tone(400,.15,'sine',.07,1.8),slide:()=>tone(300,.15,'sine',.06,.5),lane:()=>tone(600,.04,'triangle',.04),crash:()=>tone(150,.4,'sawtooth',.08,.4),power:()=>[660,880,1100].forEach((f,i)=>setTimeout(()=>tone(f,.1,'triangle',.07),i*70)),shield:()=>tone(500,.3,'square',.05,.5)}})();
+const buzz=p=>{try{navigator.vibrate?.(p)}catch{}};
+const $=id=>document.getElementById(id),cv=$('c'),g=cv.getContext('2d');
+let W=540,H=960,DPR=1;
+function fit(){const r=$('stage').getBoundingClientRect();DPR=Math.min(2.5,devicePixelRatio||1);cv.width=Math.round(r.width*DPR);cv.height=Math.round(r.height*DPR);W=540;H=W*r.height/r.width;g.setTransform(cv.width/W,0,0,cv.height/H,0,0)}
+addEventListener('resize',fit);fit();
+const hero=new Image();hero.src='../explorer-boy.webp';
+
+// ---------- world: the road runs away from us; z = distance ahead (in metres) ----------
+const LANES=[-1,0,1],LANE_W=2.3,FAR=70,CAM_H=3.2,CAM_Z=3.6;
+const horizon=()=>H*.3;
+function proj(x,y,z){const d=z+CAM_Z;const f=H*.92;const s=f/d;return{x:W/2+x*s*.62,y:horizon()+(CAM_H-y)*s*.62,s:s*.62}}
+let run=null,best=0;try{best=Number(localStorage.getItem('rmb-run-best')||0)}catch{}
+$('best').textContent=best;
+function newRun(){return{t:0,speed:11,dist:0,gems:0,lane:0,laneX:0,y:0,vy:0,slide:0,objs:[],next:18,alive:true,magnet:0,shield:0,boost:0,flash:0,deco:[]}}
+const KINDS=['jar','beam','cart'];
+function spawn(r,z){
+ const pattern=Math.random();const lanes=[-1,0,1].sort(()=>Math.random()-.5);
+ const hard=Math.min(1,r.dist/1500);
+ // obstacles: never block all three lanes with carts
+ const n=pattern<.35?1:pattern<.8?2:3;
+ for(let i=0;i<n;i++){const k=i===2?(Math.random()<.5?'jar':'beam'):KINDS[Math.floor(Math.random()*3)];r.objs.push({k,lane:lanes[i],z})}
+ const free=lanes[n]??lanes.find(l=>!r.objs.some(o=>o.z===z&&o.lane===l&&o.k==='cart'));
+ // gem trail
+ const gl=free??lanes[0];for(let j=1;j<=6;j++)r.objs.push({k:'gem',lane:gl,z:z-2-j*1.6,yy:0});
+ if(Math.random()<.12)r.objs.push({k:Math.random()<.5?'magnet':'shield',lane:gl,z:z-14});
+ r.next=z+Math.max(9,17-hard*7)+Math.random()*6;
+}
+let started=false;
+function reset(){run=newRun();run.next=34;for(let z=34;z<FAR;)spawn(run,z),z=run.next}
+reset();
+function toast(t){const e=$('toast');e.textContent=t;e.style.opacity=1;clearTimeout(e._t);e._t=setTimeout(()=>e.style.opacity=0,1400)}
+function act(a){if(!started||!run.alive)return;
+ if(a==='left'&&run.lane>-1){run.lane--;Snd.lane()}
+ if(a==='right'&&run.lane<1){run.lane++;Snd.lane()}
+ if(a==='up'&&run.y<=0.01){run.vy=9.5;run.slide=0;Snd.jump()}
+ if(a==='down'){if(run.y>0.01)run.vy=-16;run.slide=.75;Snd.slide()}}
+const VERSES=['“Be strong and courageous.” Joshua 1:9','“Run with endurance the race set before us.” Hebrews 12:1','“They will run and not grow weary.” Isaiah 40:31','“By faith the walls of Jericho fell.” Hebrews 11:30'];
+function crash(o){if(run.shield>0){run.shield=0;o.hitDone=true;Snd.shield();toast('Shield saved you! 🛡️');buzz(30);run.flash=.4;return}
+ run.alive=false;Snd.crash();buzz([60,40,80]);const score=Math.floor(run.dist);const nb=score>best;best=Math.max(best,score);try{localStorage.setItem('rmb-run-best',best)}catch{}
+ setTimeout(()=>{const ov=$('ov');ov.hidden=false;ov.innerHTML=`<small>${nb?'NEW BEST!':'GOOD RUN'}</small><h2>${score} m</h2><p>You grabbed <b>${run.gems}</b> gems. Best: ${best} m.</p><p style="font-size:15px;opacity:.85">${VERSES[Math.floor(Math.random()*VERSES.length)]}</p><button class="btn" id="again">Run again</button>`;$('again').onclick=()=>{reset();ov.hidden=true;last=performance.now()};$('best').textContent=best},650)}
+function step(dt){const r=run;if(!r.alive)return;
+ r.t+=dt;r.speed=Math.min(26,11+r.dist/120);const v=r.speed*dt;r.dist+=v;
+ r.laneX+=(r.lane*LANE_W-r.laneX)*Math.min(1,dt*14);
+ r.vy-=30*dt;r.y=Math.max(0,r.y+r.vy*dt);if(r.y===0)r.vy=Math.max(0,r.vy);
+ r.slide=Math.max(0,r.slide-dt);r.magnet=Math.max(0,r.magnet-dt);r.flash=Math.max(0,r.flash-dt);
+ for(const o of r.objs){o.z-=v;
+  if(o.k==='gem'&&r.magnet>0&&o.z<9&&o.z>-.5){o.lane+=( r.laneX/LANE_W-o.lane)*Math.min(1,dt*8)}
+  const same=Math.abs(o.lane*LANE_W-r.laneX)<1.1;
+  if(!o.hitDone&&o.z<.6&&o.z>-.6&&same){
+   if(o.k==='gem'){if(r.y<2.2){o.hitDone=true;o.gone=true;r.gems++;Snd.gem()}}
+   else if(o.k==='magnet'){o.gone=o.hitDone=true;r.magnet=10;Snd.power();toast('Gem magnet! 🧲')}
+   else if(o.k==='shield'){o.gone=o.hitDone=true;r.shield=1;Snd.power();toast('Shield of faith! 🛡️')}
+   else if(o.k==='jar'){if(r.y<1.0)crash(o);else o.hitDone=true}
+   else if(o.k==='beam'){if(!(r.slide>0&&r.y<.4))crash(o);else o.hitDone=true}
+   else if(o.k==='cart')crash(o)}}
+ r.objs=r.objs.filter(o=>o.z>-4&&!o.gone);r.next-=v;while(r.next<FAR)spawn(r,r.next);
+ if(r.dist>250&&Math.floor(r.dist/250)>Math.floor((r.dist-v)/250))toast(`${Math.floor(r.dist/250)*250} m! Keep going!`);
+ $('gems').textContent=r.gems;$('dist').textContent=Math.floor(r.dist);
+ $('pow').innerHTML=(r.magnet>0?`<span>🧲 ${Math.ceil(r.magnet)}s</span>`:'')+(r.shield?'<span>🛡️ Shield</span>':'');
+}
+// ---------- drawing ----------
+const C={sky1:'#f7c98b',sky2:'#fbe8ca',sand:'#e9cfa4',road:'#d9b98f',wall:'#d4b082',wallD:'#bf9a6c',green:'#59877d',coral:'#c86354',gold:'#faa731',ink:'#29464a'};
+function poly(pts,fill){g.fillStyle=fill;g.beginPath();pts.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));g.closePath();g.fill()}
+function drawWorld(){const hz=horizon();
+ const sky=g.createLinearGradient(0,0,0,hz);sky.addColorStop(0,C.sky1);sky.addColorStop(1,C.sky2);g.fillStyle=sky;g.fillRect(0,0,W,hz+2);
+ g.fillStyle='rgba(255,248,235,.9)';g.beginPath();g.arc(W*.72,hz*.42,34,0,7);g.fill();
+ // far city of Jericho on the horizon
+ g.fillStyle='#d9b98f';for(let i=0;i<9;i++){const x=i*68-20,h=24+((i*37)%30);g.fillRect(x,hz-h,58,h)}g.fillStyle='#c4a274';for(let i=0;i<9;i++){const x=i*68-20,h=24+((i*37)%30);for(let k=0;k<4;k++)g.fillRect(x+4+k*14,hz-h-6,8,6)}
+ g.fillStyle=C.sand;g.fillRect(0,hz,W,H-hz);
+ // road
+ const L=-LANE_W*1.5,R=LANE_W*1.5;poly([proj(L,0,FAR),proj(R,0,FAR),proj(R,0,-CAM_Z+.4),proj(L,0,-CAM_Z+.4)],C.road);
+ // moving stripes
+ const off=(run.dist%4);for(let z=FAR-off;z>-2;z-=4){const z2=Math.max(-CAM_Z+.5,z-2),a=proj(L,0,z),b=proj(R,0,z),c=proj(R,0,z2),d=proj(L,0,z2);poly([a,b,c,d],'rgba(255,255,255,.07)')}
+ for(const lx of [-LANE_W/2,LANE_W/2])for(let z=FAR-(run.dist%3);z>-2;z-=3){const z3=Math.max(-CAM_Z+.5,z-1.4),a=proj(lx-.05,0,z),b=proj(lx+.05,0,z),c=proj(lx+.05,0,z3),d=proj(lx-.05,0,z3);poly([a,b,c,d],'rgba(255,248,235,.55)')}
+ // side walls with houses
+ const sp=8,o2=run.dist%sp,NEAR=-CAM_Z+.5;for(let z=FAR-o2;z>-3;z-=sp){const zb=Math.max(NEAR,z-sp+.6);if(z<=NEAR)continue;for(const side of [-1,1]){const x0=side*(LANE_W*1.5+.6),x1=side*(LANE_W*1.5+4.5),h=3.4+((Math.floor((run.dist+z)/sp)*7)%3)*.6;
+  const a=proj(x0,0,z),b=proj(x0,0,zb),c=proj(x0,h,zb),d=proj(x0,h,z);poly([a,b,c,d],side<0?C.wall:C.wallD);
+  const t1=proj(x0,h,z),t2=proj(x1,h,z),t3=proj(x1,h,zb),t4=proj(x0,h,zb);poly([t1,t2,t3,t4],'#e6cba3');
+  const wz=z-sp/2,w1=proj(x0,h*.45,wz+.7),w2=proj(x0,h*.75,wz-.7);g.fillStyle='rgba(41,70,74,.55)';g.fillRect(Math.min(w1.x,w2.x),w2.y,Math.abs(w2.x-w1.x)+1,w1.y-w2.y);
+  if(((Math.floor((run.dist+z)/sp))%3)===0&&z-2+CAM_Z>1.2){const p=proj(side*(LANE_W*1.5+.3),0,z-2);drawPalm(p.x,p.y,p.s)}}}
+}
+function drawPalm(x,y,s){const h=s*3.2;g.strokeStyle='#9b5b2e';g.lineWidth=Math.max(1,s*.18);g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+s*.3,y-h/2,x,y-h);g.stroke();g.fillStyle=C.green;for(let i=0;i<6;i++){const a=i/6*Math.PI*2;g.beginPath();g.ellipse(x+Math.cos(a)*s*.6,y-h+Math.sin(a)*s*.25,s*.7,s*.18,a,0,7);g.fill()}}
+function drawObj(o){if(o.z+CAM_Z<1.2)return;const p=proj(o.lane*LANE_W,0,o.z);if(o.z>FAR-2)g.globalAlpha=Math.max(0,(FAR-o.z)/2);const s=p.s;
+ g.fillStyle='rgba(0,0,0,.18)';g.beginPath();g.ellipse(p.x,p.y,s*.9,s*.22,0,0,7);g.fill();
+ if(o.k==='gem'){const y=p.y-s*(.9+Math.sin(run.t*5+o.z)*.12);g.save();g.translate(p.x,y);g.rotate(run.t*2+o.z);g.fillStyle='#7ed3e6';g.beginPath();g.moveTo(0,-s*.38);g.lineTo(s*.3,0);g.lineTo(0,s*.38);g.lineTo(-s*.3,0);g.closePath();g.fill();g.fillStyle='rgba(255,255,255,.75)';g.beginPath();g.moveTo(0,-s*.38);g.lineTo(s*.1,-s*.05);g.lineTo(-s*.12,0);g.closePath();g.fill();g.restore()}
+ if(o.k==='jar'){const w=s*.8,h=s*.95;g.fillStyle=C.coral;g.beginPath();g.ellipse(p.x,p.y-h*.45,w*.55,h*.5,0,0,7);g.fill();g.fillStyle='#ad5246';g.fillRect(p.x-w*.22,p.y-h*1.02,w*.44,h*.2);g.fillStyle='rgba(255,255,255,.3)';g.beginPath();g.ellipse(p.x-w*.2,p.y-h*.55,w*.1,h*.22,0,0,7);g.fill();g.strokeStyle='#faa731';g.lineWidth=Math.max(1,s*.06);g.beginPath();g.ellipse(p.x,p.y-h*.45,w*.55,h*.12,0,0,Math.PI);g.stroke()}
+ if(o.k==='beam'){const a=proj(o.lane*LANE_W-1.1,1.5,o.z),b=proj(o.lane*LANE_W+1.1,2.1,o.z);g.fillStyle='#7a4a2b';g.fillRect(a.x,b.y,b.x-a.x,a.y-b.y);g.fillStyle='#9b5b2e';g.fillRect(a.x,b.y,b.x-a.x,(a.y-b.y)*.35);
+  for(const sx of [-1.05,1.05]){const q=proj(o.lane*LANE_W+sx,0,o.z),q2=proj(o.lane*LANE_W+sx,2.1,o.z);g.fillStyle='#7a4a2b';g.fillRect(q.x-s*.07,q2.y,s*.14,q.y-q2.y)}
+  g.fillStyle='#faa731';g.font=`700 ${Math.max(8,s*.32)}px FavorSans, sans-serif`;g.textAlign='center';g.fillText('SLIDE',p.x,b.y+(a.y-b.y)*.75)}
+ if(o.k==='cart'){const w=s*1.9,h=s*1.6;const x=p.x-w/2,y=p.y-h-s*.3;g.fillStyle='#9b5b2e';g.fillRect(x,y,w,h*.7);g.fillStyle='#b8763f';g.fillRect(x,y,w,h*.18);g.fillStyle='#e6cba3';for(let i=0;i<3;i++){g.beginPath();g.arc(x+w*(.25+i*.25),y,h*.18,Math.PI,0);g.fill()}
+  g.fillStyle=C.ink;for(const wx of [x+w*.2,x+w*.8]){g.beginPath();g.arc(wx,p.y-s*.3,s*.32,0,7);g.fill();g.fillStyle='#e6cba3';g.beginPath();g.arc(wx,p.y-s*.3,s*.1,0,7);g.fill();g.fillStyle=C.ink}}
+ if(o.k==='magnet'||o.k==='shield'){const y=p.y-s*1.1;g.fillStyle='rgba(250,167,49,.35)';g.beginPath();g.arc(p.x,y,s*.6,0,7);g.fill();g.font=`${s*.75}px sans-serif`;g.textAlign='center';g.textBaseline='middle';g.fillText(o.k==='magnet'?'🧲':'🛡️',p.x,y);g.textBaseline='alphabetic'}
+ g.globalAlpha=1}
+function drawHero(){const r=run,p=proj(r.laneX,r.y,0),s=p.s;const sl=r.slide>0&&r.y<.3;
+ const g0=proj(r.laneX,0,0);g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(g0.x,g0.y,s*.8*(1-r.y*.12),s*.2,0,0,7);g.fill();
+ if(r.shield){g.strokeStyle='rgba(126,211,230,.8)';g.lineWidth=4;g.beginPath();g.ellipse(p.x,p.y-s*1.05,s*.95,s*1.25,0,0,7);g.stroke()}
+ const h=s*2.2*(sl?.55:1),w=h*.62;const bob=r.y>0?0:Math.abs(Math.sin(r.t*14))*s*.08;
+ g.save();if(r.flash>0&&Math.floor(r.flash*20)%2)g.globalAlpha=.5;
+ if(hero.complete&&hero.naturalWidth){g.translate(p.x,p.y-bob);if(sl)g.rotate(-.5);g.drawImage(hero,-w/2,-h,w,h)}
+ else{g.fillStyle=C.coral;g.fillRect(p.x-w/3,p.y-h,w*.66,h)}
+ g.restore()}
+function draw(){g.clearRect(0,0,W,H);drawWorld();run.objs.slice().sort((a,b)=>b.z-a.z).forEach(o=>{if(o.z>-.3)drawObj(o)});drawHero();run.objs.filter(o=>o.z<=-.3).forEach(drawObj);
+ const v=g.createRadialGradient(W/2,H*.55,H*.3,W/2,H*.55,H*.8);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(41,70,74,.25)');g.fillStyle=v;g.fillRect(0,0,W,H)}
+let last=performance.now();
+function loop(now){const dt=Math.min(.04,(now-last)/1000);last=now;if(started)step(dt);draw();requestAnimationFrame(loop)}
+// ---------- controls ----------
+const KEY={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'up',KeyW:'up',Space:'up',ArrowDown:'down',KeyS:'down'};
+addEventListener('keydown',e=>{if(KEY[e.code]){e.preventDefault();act(KEY[e.code])}});
+let sx,sy,st;cv.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY;st=performance.now()});
+cv.addEventListener('pointerup',e=>{const dx=e.clientX-sx,dy=e.clientY-sy;if(Math.max(Math.abs(dx),Math.abs(dy))<24){const r=cv.getBoundingClientRect();act(e.clientX<r.left+r.width/3?'left':e.clientX>r.left+r.width*2/3?'right':'up');return}act(Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up'))});
+$('go').onclick=()=>{$('ov').hidden=true;started=true;last=performance.now();Snd.power()};
+requestAnimationFrame(loop);
+window.__run={get objs(){return run.objs.map(o=>({k:o.k,lane:o.lane,z:o.z}))},get y(){return run.y},get s(){return{dist:Math.floor(run.dist),gems:run.gems,alive:run.alive,lane:run.lane,objs:run.objs.length}},act};
+</script></body></html>

@@ -1,0 +1,123 @@
+<!doctype html><html lang="en"><head><title>Flock.io</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="robots" content="noindex, nofollow">
+<style>
+@font-face{font-family:FavorSans;src:url('/favor-sans-bold.otf')}@font-face{font-family:Agharti;src:url('/agharti-bold.ttf')}
+[hidden]{display:none!important}
+:root{--paper:#fff8eb;--coral:#c86354;--gold:#faa731;--gold2:#d9861a;--green:#59877d;--ink:#29464a;--display:Agharti,Impact,sans-serif;--body:FavorSans,'Trebuchet MS',system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#466f66;font-family:var(--body);color:var(--ink);-webkit-user-select:none;user-select:none;touch-action:none}
+canvas{display:block;width:100vw;height:100dvh}
+.hud{position:fixed;left:10px;top:max(10px,env(safe-area-inset-top));display:flex;gap:8px;pointer-events:none}
+.pill{background:rgba(255,248,235,.92);border-radius:14px;padding:6px 12px;font-weight:700;box-shadow:0 3px 0 #0002}
+.pill b{color:var(--coral)}
+.board{position:fixed;right:10px;top:max(10px,env(safe-area-inset-top));background:rgba(41,70,74,.78);color:#fff;border-radius:14px;padding:8px 12px;font-size:13px;min-width:150px;pointer-events:none}
+.board b{display:block;color:#ffd98a;letter-spacing:.1em;font-size:11px;margin-bottom:4px}
+.board div{display:flex;justify-content:space-between;gap:10px}.board .me{color:#ffd98a}
+.boost{position:fixed;right:18px;bottom:max(18px,env(safe-area-inset-bottom));width:84px;height:84px;border-radius:50%;border:4px solid #fff;background:var(--gold);font:700 15px var(--body);color:var(--ink);box-shadow:0 6px 0 var(--gold2);touch-action:none}
+.boost.on{background:#ffd98a;transform:translateY(3px);box-shadow:0 3px 0 var(--gold2)}
+.overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;background:rgba(41,70,74,.84);color:#fff;padding:24px}
+.overlay small{letter-spacing:.16em;font-weight:700;color:#a8dcc4}
+.overlay h2{font:400 clamp(48px,11vw,80px)/.9 var(--display);text-transform:uppercase;margin:0;color:var(--gold);text-shadow:0 4px 0 #a75f12}
+.overlay p{margin:0;max-width:40ch;line-height:1.45}
+.overlay input{font:700 18px var(--body);border-radius:14px;border:3px solid #fff;padding:10px 14px;width:min(280px,80vw);text-align:center}
+.btn{font:700 20px var(--body);border:0;border-radius:16px;padding:13px 30px;background:var(--gold);color:var(--ink);cursor:pointer;box-shadow:0 5px 0 var(--gold2)}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--gold2)}
+</style></head><body>
+<canvas id="c" aria-label="Flock game: lead your line of sheep, collect lost sheep and don’t bump into other flocks"></canvas>
+<div class="hud"><span class="pill">Flock <b id="len">0</b></span><span class="pill">Best <b id="best">0</b></span></div>
+<div class="board" id="board"></div>
+<button class="boost" id="boost" aria-label="Hold to run faster">HOLD<br>RUN</button>
+<div class="overlay" id="ov">
+  <small>KIDS ARCADE · DRAFT</small>
+  <h2>Flock.io</h2>
+  <p>You’re a shepherd! Gather lost sheep and your flock grows behind you. Don’t walk into another flock. Get them to walk into yours!</p>
+  <p style="font-size:14px;opacity:.85">Move: drag or point where to go (or arrow keys). Hold <b>RUN</b> (or Space) to go faster, but you’ll drop a sheep.</p>
+  <input id="name" maxlength="12" placeholder="Your name" autocomplete="off">
+  <button class="btn" id="go">Start</button>
+</div>
+<script>
+const Snd=(()=>{let ac;const ok=()=>{try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();return ac}catch{return null}};
+ const tone=(f,d=.08,type='sine',v=.06,slide=0)=>{const a=ok();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,a.currentTime);if(slide)o.frequency.exponentialRampToValueAtTime(f*slide,a.currentTime+d);g.gain.setValueAtTime(v,a.currentTime);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d);o.connect(g).connect(a.destination);o.start();o.stop(a.currentTime+d)};
+ let l=0;return{eat:()=>{const n=performance.now();if(n-l<60)return;l=n;tone(880+Math.random()*300,.05,'triangle',.04)},baa:()=>{tone(420,.25,'sawtooth',.03,.8)},win:()=>[523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,.14,'triangle',.07),i*90)),bad:()=>tone(160,.4,'sawtooth',.07,.5)}})();
+const buzz=p=>{try{navigator.vibrate?.(p)}catch{}};
+const $=id=>document.getElementById(id),cv=$('c'),g=cv.getContext('2d');
+let VW=0,VH=0,DPR=1,Z=1;
+function fit(){DPR=Math.min(2.5,devicePixelRatio||1);VW=innerWidth;VH=innerHeight;cv.width=VW*DPR;cv.height=VH*DPR;Z=Math.max(.7,Math.min(1.15,Math.min(VW,VH)/720))}
+addEventListener('resize',fit);fit();
+const WORLD=2600,SP=17,R=11;
+const COLS=['#c86354','#59877d','#a28fbc','#4f8fd8','#e58fb4','#d9861a','#2f8f9b','#8a6bb5'];
+const NAMES=['Ruth','Caleb','Miriam','Gideon','Hannah','Boaz','Deborah','Micah','Lydia','Silas','Esther','Joel'];
+let pellets=[],flocks=[],me=null,best=0,running=false,boosting=false,target=null,keys={};
+try{best=Number(localStorage.getItem('rmb-flock-best')||0)}catch{}$('best').textContent=best;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+function addPellet(x,y,v=1,lamb=false){pellets.push({x:x??rnd(40,WORLD-40),y:y??rnd(40,WORLD-40),v,lamb,b:Math.random()*6})}
+function makeFlock(name,col,human){const x=human?WORLD/2+rnd(-200,200):rnd(300,WORLD-300),y=human?WORLD/2+rnd(-200,200):rnd(300,WORLD-300),a=rnd(0,6.28);const f={name,col,human,x,y,a,ta:a,len:6,trail:[],alive:true,boost:false,dropT:0,think:0,goal:null};for(let i=0;i<80;i++)f.trail.push({x:x-Math.cos(a)*i*2,y:y-Math.sin(a)*i*2});return f}
+function start(){pellets=[];for(let i=0;i<700;i++)addPellet();flocks=[];me=makeFlock(($('name').value.trim()||'You').slice(0,12),'#faa731',true);flocks.push(me);for(let i=0;i<9;i++)flocks.push(makeFlock(NAMES[i%NAMES.length],COLS[i%COLS.length],false));running=true;$('ov').hidden=true;Snd.baa()}
+// the body is a list of sheep spaced along the trail
+function bodyPts(f){const pts=[];let need=SP,acc=0;const t=f.trail;for(let i=1;i<t.length&&pts.length<f.len;i++){const d=Math.hypot(t[i].x-t[i-1].x,t[i].y-t[i-1].y);acc+=d;while(acc>=need&&pts.length<f.len){const k=(acc-need)/d;pts.push({x:t[i].x+(t[i-1].x-t[i].x)*k,y:t[i].y+(t[i-1].y-t[i].y)*k});need+=SP}}return pts}
+function die(f,by){f.alive=false;const pts=bodyPts(f);pts.forEach((p,i)=>{if(i%1===0)addPellet(p.x+rnd(-6,6),p.y+rnd(-6,6),2,true)});if(by&&by.human){Snd.win();buzz(20)}
+ if(f.human){Snd.bad();buzz([60,40,60]);running=false;const score=f.len;const nb=score>best;best=Math.max(best,score);try{localStorage.setItem('rmb-flock-best',best)}catch{}$('best').textContent=best;
+  setTimeout(()=>{const ov=$('ov');ov.hidden=false;ov.innerHTML=`<small>${nb?'NEW BEST!':'GOOD TRY, SHEPHERD'}</small><h2>${score} sheep</h2><p>“I am the good shepherd. The good shepherd lays down his life for the sheep.” John 10:11</p><button class="btn" id="again">Play again</button>`;$('again').onclick=start},500)}
+ else setTimeout(()=>{const i=flocks.indexOf(f);if(i>=0)flocks[i]=makeFlock(f.name,f.col,false)},2500)}
+function stepFlock(f,dt){if(!f.alive)return;
+ if(f.human){if(target){f.ta=Math.atan2(target.y,target.x)}let kx=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0),ky=(keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0);if(kx||ky)f.ta=Math.atan2(ky,kx);f.boost=boosting&&f.len>6}
+ else{f.think-=dt;if(f.think<=0){f.think=rnd(.15,.4);
+   // avoid nearby bodies, else go to the nearest food, sometimes hunt the player
+   let danger=null,dd=1e9;for(const o of flocks){if(o===f||!o.alive)continue;for(const p of bodyPts(o)){const d=Math.hypot(p.x-f.x,p.y-f.y);if(d<dd){dd=d;danger=p}}}
+   if(danger&&dd<90){f.ta=Math.atan2(f.y-danger.y,f.x-danger.x)+rnd(-.5,.5);f.boost=dd<50&&f.len>10}
+   else{let best=null,bd=1e9;for(const p of pellets){const d=Math.hypot(p.x-f.x,p.y-f.y)-(p.lamb?120:0);if(d<bd){bd=d;best=p}}if(best)f.ta=Math.atan2(best.y-f.y,best.x-f.x);f.boost=false;
+    if(me&&me.alive&&f.len>me.len+8&&Math.hypot(me.x-f.x,me.y-f.y)<300&&Math.random()<.4){const ah=me.a;f.ta=Math.atan2(me.y+Math.sin(ah)*120-f.y,me.x+Math.cos(ah)*120-f.x);f.boost=f.len>12}}
+   if(f.x<150)f.ta=0;if(f.x>WORLD-150)f.ta=Math.PI;if(f.y<150)f.ta=Math.PI/2;if(f.y>WORLD-150)f.ta=-Math.PI/2}}
+ let da=((f.ta-f.a+Math.PI*3)%(Math.PI*2))-Math.PI;const turn=(f.boost?3.2:4.2)*dt;f.a+=Math.max(-turn,Math.min(turn,da));
+ const sp=(f.boost?270:150)*dt;f.x+=Math.cos(f.a)*sp;f.y+=Math.sin(f.a)*sp;
+ if(f.boost){f.dropT-=dt;if(f.dropT<=0){f.dropT=.35;f.len--;const t=f.trail[f.trail.length-1];addPellet(t.x,t.y,1)}}
+ f.trail.unshift({x:f.x,y:f.y});const maxPts=Math.ceil((f.len+2)*SP/1.5)+20;if(f.trail.length>maxPts)f.trail.length=maxPts;
+ // walls
+ if(f.x<R||f.y<R||f.x>WORLD-R||f.y>WORLD-R){die(f,null);return}
+ // eat
+ for(const p of pellets){if(Math.abs(p.x-f.x)<24&&Math.abs(p.y-f.y)<24&&Math.hypot(p.x-f.x,p.y-f.y)<R+10){p.eaten=true;f.len+=p.v;if(f.human)Snd.eat()}}
+}
+function collisions(){for(const f of flocks){if(!f.alive)continue;for(const o of flocks){if(o===f||!o.alive)continue;
+ if(Math.abs(o.x-f.x)>f.len*SP+o.len*SP+40&&Math.abs(o.y-f.y)>f.len*SP+o.len*SP+40)continue;
+ for(const p of bodyPts(o)){if(Math.hypot(p.x-f.x,p.y-f.y)<R*1.6){die(f,o);break}}if(!f.alive)break;
+ if(Math.hypot(o.x-f.x,o.y-f.y)<R*2){die(f.len<o.len?f:o,f.len<o.len?o:f)}}}}
+// ---------- draw ----------
+const grass=document.createElement('canvas');grass.width=grass.height=256;(()=>{const b=grass.getContext('2d');b.fillStyle='#6f9a8e';b.fillRect(0,0,256,256);for(let i=0;i<260;i++){b.strokeStyle=`rgba(255,255,255,${.04+Math.random()*.06})`;b.lineWidth=1.3;const x=Math.random()*256,y=Math.random()*256;b.beginPath();b.moveTo(x,y);b.lineTo(x+rnd(-2,2),y-rnd(3,7));b.stroke()}for(let i=0;i<5;i++){const x=Math.random()*256,y=Math.random()*256;b.fillStyle=['#faa731','#fff8eb','#c86354'][i%3];for(let k=0;k<5;k++){b.beginPath();b.arc(x+Math.cos(k*1.26)*3,y+Math.sin(k*1.26)*3,2.2,0,7);b.fill()}}})();
+let pat=null;
+function sheep(x,y,a,s=1,lamb=false,tint){g.save();g.translate(x,y);g.rotate(a);g.scale(s,s);
+ g.fillStyle='rgba(0,0,0,.16)';g.beginPath();g.ellipse(2,5,13,8,0,0,7);g.fill();
+ g.fillStyle=lamb?'#fffdf6':'#fbf4e6';[[-6,-4],[-6,4],[0,-6],[0,6],[5,-3],[5,3],[-1,0]].forEach(([u,v])=>{g.beginPath();g.arc(u,v,5.6,0,7);g.fill()});
+ if(tint){g.fillStyle=tint;g.globalAlpha=.25;g.beginPath();g.arc(-1,0,9,0,7);g.fill();g.globalAlpha=1}
+ g.fillStyle='#3d4b4a';g.beginPath();g.ellipse(10,0,5,4.2,0,0,7);g.fill();g.fillStyle='#fff';g.beginPath();g.arc(12,-1.6,1.1,0,7);g.arc(12,1.6,1.1,0,7);g.fill();g.restore()}
+function shepherd(f){g.save();g.translate(f.x,f.y);g.rotate(f.a);g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(2,4,15,11,0,0,7);g.fill();
+ g.fillStyle=f.col;g.beginPath();g.ellipse(0,0,12,13,0,0,7);g.fill();g.fillStyle='#f3c9a5';g.beginPath();g.arc(3,0,7,0,7);g.fill();g.fillStyle='#fbe8ca';g.beginPath();g.arc(1,0,7.4,Math.PI*.5,Math.PI*1.5);g.fill();
+ g.strokeStyle='#7a4a2b';g.lineWidth=3;g.lineCap='round';g.beginPath();g.moveTo(-4,11);g.lineTo(16,11);g.arc(16,7,4,Math.PI/2,-Math.PI/2,true);g.stroke();g.restore();
+ g.font='700 13px FavorSans, sans-serif';g.textAlign='center';g.fillStyle='rgba(41,70,74,.75)';const w=g.measureText(f.name).width+12;g.beginPath();g.roundRect?g.roundRect(f.x-w/2,f.y-36,w,18,9):g.rect(f.x-w/2,f.y-36,w,18);g.fill();g.fillStyle='#fff';g.fillText(f.name,f.x,f.y-23)}
+function draw(){const cam=me||{x:WORLD/2,y:WORLD/2};g.setTransform(DPR*Z,0,0,DPR*Z,0,0);const vw=VW/Z,vh=VH/Z,ox=cam.x-vw/2,oy=cam.y-vh/2;
+ if(!pat)pat=g.createPattern(grass,'repeat');g.save();g.translate(-ox,-oy);g.fillStyle='#2f4f49';g.fillRect(ox,oy,vw,vh);g.fillStyle=pat;g.fillRect(0,0,WORLD,WORLD);
+ g.strokeStyle='#9b5b2e';g.lineWidth=10;g.strokeRect(0,0,WORLD,WORLD);g.strokeStyle='#d9b98f';g.lineWidth=4;g.setLineDash([18,12]);g.strokeRect(-8,-8,WORLD+16,WORLD+16);g.setLineDash([]);
+ const t=performance.now()/1000;for(const p of pellets){if(p.x<ox-20||p.x>ox+vw+20||p.y<oy-20||p.y>oy+vh+20)continue;sheep(p.x,p.y,Math.sin(t+p.b)*.5+p.b,p.lamb?.8:.68,p.lamb)}
+ for(const f of flocks){if(!f.alive)continue;const pts=bodyPts(f);for(let i=pts.length-1;i>=0;i--){const p=pts[i],q=i?pts[i-1]:f;if(p.x<ox-30||p.x>ox+vw+30||p.y<oy-30||p.y>oy+vh+30)continue;sheep(p.x,p.y,Math.atan2(q.y-p.y,q.x-p.x),.95,false,f.col)}shepherd(f)}
+ g.restore();
+ // minimap
+ g.setTransform(DPR,0,0,DPR,0,0);const m=Math.min(120,VW*.26),mx=12,my=VH-m-12;g.fillStyle='rgba(41,70,74,.7)';g.fillRect(mx,my,m,m);g.strokeStyle='#fff8eb';g.lineWidth=2;g.strokeRect(mx,my,m,m);
+ for(const f of flocks){if(!f.alive)continue;g.fillStyle=f.human?'#ffd98a':f.col;g.beginPath();g.arc(mx+f.x/WORLD*m,my+f.y/WORLD*m,f.human?4:2.6,0,7);g.fill()}
+}
+let last=performance.now(),boardT=0;
+function loop(now){const dt=Math.min(.04,(now-last)/1000);last=now;
+ if(running){flocks.forEach(f=>stepFlock(f,dt));collisions();pellets=pellets.filter(p=>!p.eaten);while(pellets.length<700)addPellet();
+  $('len').textContent=me.len;boardT-=dt;if(boardT<=0){boardT=.5;const top=flocks.filter(f=>f.alive).sort((a,b)=>b.len-a.len).slice(0,5);$('board').innerHTML='<b>BIGGEST FLOCKS</b>'+top.map((f,i)=>`<div class="${f.human?'me':''}"><span>${i+1}. ${f.name.replace(/[<>&]/g,'')}</span><span>${f.len}</span></div>`).join('')+(top.includes(me)||!me.alive?'':`<div class="me"><span>You</span><span>${me.len}</span></div>`)}}
+ draw();requestAnimationFrame(loop)}
+// ---------- controls ----------
+let dragging=false;
+const aim=e=>{target={x:e.clientX-VW/2,y:e.clientY-VH/2}};
+cv.addEventListener('pointerdown',e=>{dragging=true;aim(e)});addEventListener('pointermove',e=>{if(dragging||e.pointerType==='mouse')aim(e)});addEventListener('pointerup',()=>dragging=false);
+const bb=$('boost');const bon=v=>{boosting=v;bb.classList.toggle('on',v)};bb.addEventListener('pointerdown',e=>{e.stopPropagation();bon(true)});bb.addEventListener('pointerup',()=>bon(false));bb.addEventListener('pointerleave',()=>bon(false));
+addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Space'){e.preventDefault();bon(true)}if(e.code.startsWith('Arrow'))e.preventDefault()});addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space')bon(false)});
+$('go').onclick=start;$('name').addEventListener('keydown',e=>{if(e.key==='Enter')start()});
+// demo world behind the start screen
+for(let i=0;i<700;i++)addPellet();for(let i=0;i<9;i++)flocks.push(makeFlock(NAMES[i],COLS[i%COLS.length],false));
+setInterval(()=>{if(!running){flocks.forEach(f=>stepFlock(f,.033));collisions();pellets=pellets.filter(p=>!p.eaten)}},33);
+requestAnimationFrame(loop);
+window.__flock={near:()=>{let b=null,d=1e9;for(const p of pellets){const q=Math.hypot(p.x-me.x,p.y-me.y);if(q<d){d=q;b=p}}return b?{x:b.x-me.x,y:b.y-me.y}:null},get s(){return{running,len:me?.len,alive:me?.alive,flocks:flocks.filter(f=>f.alive).length,pellets:pellets.length}},steer:(x,y)=>{target={x,y}},boost:v=>bon(v)};
+</script></body></html>
