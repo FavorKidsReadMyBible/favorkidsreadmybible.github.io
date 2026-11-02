@@ -4,7 +4,7 @@
 const BOOKS = [
   { id: 'matthew', name: 'Matthew', n: 28, color: '#c86354', blurb: 'Jesus the promised King' },
   { id: 'mark', name: 'Mark', n: 16, color: '#59877d', blurb: 'Jesus the fast-moving servant' },
-  { id: 'luke', name: 'Luke', n: 24, color: '#a28fbc', blurb: 'Jesus who came for everyone', soon: 'Opens in December' }
+  { id: 'luke', name: 'Luke', n: 24, color: '#a28fbc', blurb: 'Jesus who came for everyone', soon: 'Coming soon' }
 ];
 const DEFAULT_BOOK = 'mark';
 const BOOK_BASE = () => (window.V3_BASE || '');

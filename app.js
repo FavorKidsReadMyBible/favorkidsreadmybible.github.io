@@ -155,6 +155,12 @@ function render() {
 
   // Today
   $('#todayTitle').textContent = `${B.name} ${n}${little ? `:${littleSpan(n).join('–')}` : ''}`;
+  // Book chips on the Today card: switch between Matthew and Mark any time; upcoming books show "Coming soon"
+  const chips = $('#bookChips');
+  if (chips) {
+    chips.innerHTML = `<span class="bk-chips-label">Book:</span>${BOOKS.map(b => b.soon ? `<span class="bk-chip soon" title="${b.soon}">🔒 ${b.name} · ${b.soon}</span>` : `<button class="bk-chip ${b.id === B.id ? 'on' : ''}" data-chip="${b.id}" style="--bk:${b.color}">${b.name} <small>${bookDone(p, b.id).length}/${b.n}</small></button>`).join('')}`;
+    chips.querySelectorAll('[data-chip]').forEach(c => c.onclick = () => { if (c.dataset.chip === curBookId(p)) return; p.book = c.dataset.chip; p.today = null; save(); try { SkyAudio.sfx('page'); } catch { } render(); toast(`Now reading ${bookInfo(p.book).name}!`); });
+  }
   if (done) {
     const next = nextChapter(p);
     $('#todayDescription').textContent = `Great job! Come back tomorrow to read your Bible again${rereading(p) && bookDone(p).length === B.n && next === 1 ? '' : ` — ${B.name} ${next} is next`}.`;

@@ -7,3 +7,11 @@
 .bk-book.on{background:var(--bk);color:#fff}.bk-book.on b,.bk-book.on i{color:#fff}
 .bk-book:disabled{opacity:.55;box-shadow:none;cursor:default}
 @media(max-width:600px){.bk-shelf{grid-template-columns:1fr 1fr}}
+
+/* Book chips on the Today's Bible card */
+.bk-chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+.bk-chips-label{font-weight:800;font-size:13px;color:#6e7775}
+.bk-chip{--bk:#59877d;font:700 14px FavorSans,'DM Sans',sans-serif;border:2px solid var(--bk);background:#fff;color:var(--bk);border-radius:999px;padding:6px 12px;cursor:pointer}
+.bk-chip small{font-weight:700;opacity:.75;margin-left:2px}
+.bk-chip.on{background:var(--bk);color:#fff}
+.bk-chip.soon{border:2px dashed #cbb9a4;color:#9a8f83;background:#fff8eb;font:700 13px FavorSans,'DM Sans',sans-serif;border-radius:999px;padding:6px 12px}
