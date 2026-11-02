@@ -10,6 +10,8 @@ canvas{display:block;width:100vw;height:100dvh}
 .hud{position:fixed;left:10px;top:max(10px,env(safe-area-inset-top));display:flex;gap:8px;pointer-events:none}
 .pill{background:rgba(255,248,235,.92);border-radius:14px;padding:6px 12px;font-weight:700;box-shadow:0 3px 0 #0002}
 .pill b{color:var(--coral)}
+.goal{position:fixed;left:50%;transform:translateX(-50%);top:calc(max(10px,env(safe-area-inset-top)) + 46px);background:rgba(255,248,235,.94);border-radius:14px;padding:6px 12px;font-weight:700;font-size:13px;text-align:center;min-width:220px;box-shadow:0 3px 0 #0002;pointer-events:none}.goal i{display:block;height:8px;border-radius:4px;background:#ecd4b7;margin:4px 0;overflow:hidden}.goal i span{display:block;height:100%;background:linear-gradient(90deg,#59877d,#faa731)}
+@media(max-width:600px){.goal{top:calc(max(10px,env(safe-area-inset-top)) + 44px);left:10px;transform:none;min-width:0}.board{display:none}}
 .board{position:fixed;right:10px;top:max(10px,env(safe-area-inset-top));background:rgba(41,70,74,.78);color:#fff;border-radius:14px;padding:8px 12px;font-size:13px;min-width:150px;pointer-events:none}
 .board b{display:block;color:#ffd98a;letter-spacing:.1em;font-size:11px;margin-bottom:4px}
 .board div{display:flex;justify-content:space-between;gap:10px}.board .me{color:#ffd98a}
@@ -25,16 +27,18 @@ canvas{display:block;width:100vw;height:100dvh}
 </style></head><body>
 <canvas id="c" aria-label="Flock game: lead your line of sheep, collect lost sheep and don’t bump into other flocks"></canvas>
 <div class="hud"><span class="pill">Flock <b id="len">0</b></span><span class="pill">Best <b id="best">0</b></span></div>
+<div class="goal" id="goal"></div>
 <div class="board" id="board"></div>
 <button class="boost" id="boost" aria-label="Hold to run faster">HOLD<br>RUN</button>
 <div class="overlay" id="ov">
   <small>KIDS ARCADE · DRAFT</small>
   <h2>Flock.io</h2>
-  <p>You’re a shepherd! Gather lost sheep and your flock grows behind you. Don’t walk into another flock. Get them to walk into yours!</p>
-  <p style="font-size:14px;opacity:.85">Move: drag or point where to go (or arrow keys). Hold <b>RUN</b> (or Space) to go faster, but you’ll drop a sheep.</p>
+  <p>You’re a shepherd! Gather lost sheep and your flock grows behind you. <b>Reach the sheep goal to win the level.</b> Don’t walk into another flock or the fence. Get them to walk into yours!</p>
+  <p style="font-size:14px;opacity:.85">Move: put your thumb anywhere and slide it like a joystick (or use the mouse / arrow keys). Hold <b>RUN</b> (or Space) to go faster, but you’ll drop a sheep.</p>
   <input id="name" maxlength="12" placeholder="Your name" autocomplete="off">
   <button class="btn" id="go">Start</button>
 </div>
+<script src="verses.js"></script>
 <script>
 const Snd=(()=>{let ac;const ok=()=>{try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();return ac}catch{return null}};
  const tone=(f,d=.08,type='sine',v=.06,slide=0)=>{const a=ok();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f,a.currentTime);if(slide)o.frequency.exponentialRampToValueAtTime(f*slide,a.currentTime+d);g.gain.setValueAtTime(v,a.currentTime);g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d);o.connect(g).connect(a.destination);o.start();o.stop(a.currentTime+d)};
@@ -52,12 +56,21 @@ try{best=Number(localStorage.getItem('rmb-flock-best')||0)}catch{}$('best').text
 const rnd=(a,b)=>a+Math.random()*(b-a);
 function addPellet(x,y,v=1,lamb=false){pellets.push({x:x??rnd(40,WORLD-40),y:y??rnd(40,WORLD-40),v,lamb,b:Math.random()*6})}
 function makeFlock(name,col,human){const x=human?WORLD/2+rnd(-200,200):rnd(300,WORLD-300),y=human?WORLD/2+rnd(-200,200):rnd(300,WORLD-300),a=rnd(0,6.28);const f={name,col,human,x,y,a,ta:a,len:6,trail:[],alive:true,boost:false,dropT:0,think:0,goal:null};for(let i=0;i<80;i++)f.trail.push({x:x-Math.cos(a)*i*2,y:y-Math.sin(a)*i*2});return f}
-function start(){pellets=[];for(let i=0;i<700;i++)addPellet();flocks=[];me=makeFlock(($('name').value.trim()||'You').slice(0,12),'#faa731',true);flocks.push(me);for(let i=0;i<9;i++)flocks.push(makeFlock(NAMES[i%NAMES.length],COLS[i%COLS.length],false));running=true;$('ov').hidden=true;Snd.baa()}
+const LEVELS=[{goal:40,ai:6,hunt:.15,name:'Green pastures'},{goal:80,ai:8,hunt:.3,name:'Hillside'},{goal:130,ai:10,hunt:.45,name:'Valley'},{goal:200,ai:12,hunt:.6,name:'Mountain top'}];
+let level=0,myName='You';try{level=Math.min(LEVELS.length-1,Number(localStorage.getItem('rmb-flock-level')||0))}catch{}
+const LV=()=>LEVELS[Math.min(level,LEVELS.length-1)];
+function start(keep){pellets=[];for(let i=0;i<700;i++)addPellet();flocks=[];if($('name'))myName=($('name').value.trim()||'You').slice(0,12);me=makeFlock(myName,'#faa731',true);me.safe=3;if(typeof keep==='number')me.len=keep;flocks.push(me);for(let i=0;i<LV().ai;i++)flocks.push(makeFlock(NAMES[i%NAMES.length],COLS[i%COLS.length],false));running=true;$('ov').hidden=true;Snd.baa();goalHud()}
+function goalHud(){const L=LV();$('goal').innerHTML=`Level ${level+1} · ${L.name}<i><span style="width:${Math.min(100,(me?me.len:0)/L.goal*100)}%"></span></i>${me?Math.min(me.len,L.goal):0} / ${L.goal} sheep`}
+async function winLevel(){running=false;Snd.win();buzz([20,40,20]);const ov=$('ov');const lastLv=level>=LEVELS.length-1;
+ ov.hidden=false;ov.innerHTML=`<small>LEVEL ${level+1} COMPLETE!</small><h2>${me.len} sheep!</h2><p>You gathered your whole flock. “The Lord is my shepherd; I shall not want.” Psalm 23:1</p>${lastLv?'<p><b>You beat every level!</b> Play again to beat your best.</p>':''}<button class="btn" id="nextLv">${lastLv?'Play again':'Next level'}</button>`;
+ confetti();$('nextLv').onclick=async()=>{ov.hidden=true;if(window.RMBVerse)await RMBVerse.chapterQuiz({title:`Unlock level ${Math.min(level+2,LEVELS.length)}`});if(!lastLv)level++;try{localStorage.setItem('rmb-flock-level',level)}catch{}start()}}
+function confetti(n=140){const c=document.createElement('canvas'),d=Math.min(2,devicePixelRatio||1);c.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:60';document.body.append(c);const w=c.width=innerWidth*d,h=c.height=innerHeight*d,x=c.getContext('2d'),cols=['#faa731','#c86354','#59877d','#a28fbc','#fbe8ca'];const ps=Array.from({length:n},()=>({x:w/2+(Math.random()-.5)*w*.3,y:h*.4,vx:(Math.random()-.5)*26*d,vy:(-Math.random()*22-8)*d,r:(4+Math.random()*6)*d,a:Math.random()*6,va:(Math.random()-.5)*.4,c:cols[Math.floor(Math.random()*5)]}));let t=0;const k=()=>{x.clearRect(0,0,w,h);t++;ps.forEach(p=>{p.vy+=.7*d;p.vx*=.985;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillStyle=p.c;x.fillRect(-p.r,-p.r/2,p.r*2,p.r);x.restore()});if(t<140)requestAnimationFrame(k);else c.remove()};k()}
 // the body is a list of sheep spaced along the trail
 function bodyPts(f){const pts=[];let need=SP,acc=0;const t=f.trail;for(let i=1;i<t.length&&pts.length<f.len;i++){const d=Math.hypot(t[i].x-t[i-1].x,t[i].y-t[i-1].y);acc+=d;while(acc>=need&&pts.length<f.len){const k=(acc-need)/d;pts.push({x:t[i].x+(t[i-1].x-t[i].x)*k,y:t[i].y+(t[i-1].y-t[i].y)*k});need+=SP}}return pts}
-function die(f,by){f.alive=false;const pts=bodyPts(f);pts.forEach((p,i)=>{if(i%1===0)addPellet(p.x+rnd(-6,6),p.y+rnd(-6,6),2,true)});if(by&&by.human){Snd.win();buzz(20)}
+function die(f,by,why){if(f.safe>0)return;f.alive=false;const pts=bodyPts(f);pts.forEach((p,i)=>{if(i%1===0)addPellet(p.x+rnd(-6,6),p.y+rnd(-6,6),2,true)});if(by&&by.human){Snd.win();buzz(20)}
  if(f.human){Snd.bad();buzz([60,40,60]);running=false;const score=f.len;const nb=score>best;best=Math.max(best,score);try{localStorage.setItem('rmb-flock-best',best)}catch{}$('best').textContent=best;
-  setTimeout(()=>{const ov=$('ov');ov.hidden=false;ov.innerHTML=`<small>${nb?'NEW BEST!':'GOOD TRY, SHEPHERD'}</small><h2>${score} sheep</h2><p>“I am the good shepherd. The good shepherd lays down his life for the sheep.” John 10:11</p><button class="btn" id="again">Play again</button>`;$('again').onclick=start},500)}
+  setTimeout(()=>{const ov=$('ov');ov.hidden=false;ov.innerHTML=`<small>${why==='fence'?'YOU BUMPED THE FENCE!':`YOU WALKED INTO ${by?by.name.toUpperCase().replace(/[<>&]/g,''):'ANOTHER'}’S FLOCK!`}</small><h2>${score} sheep</h2><p>“I am the good shepherd. The good shepherd lays down his life for the sheep.” John 10:11</p><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button class="btn" id="life">Extra life · memory verse</button><button class="btn" id="again" style="background:#59877d;color:#fff;box-shadow:0 5px 0 #466f66">Start over</button></div>`;
+  $('again').onclick=()=>start();$('life').onclick=async()=>{ov.hidden=true;if(window.RMBVerse)await RMBVerse.memoryQuiz({title:'Extra life!'});start(Math.max(6,Math.floor(score*.75)))}},500)}
  else setTimeout(()=>{const i=flocks.indexOf(f);if(i>=0)flocks[i]=makeFlock(f.name,f.col,false)},2500)}
 function stepFlock(f,dt){if(!f.alive)return;
  if(f.human){if(target){f.ta=Math.atan2(target.y,target.x)}let kx=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0),ky=(keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0);if(kx||ky)f.ta=Math.atan2(ky,kx);f.boost=boosting&&f.len>6}
@@ -66,14 +79,16 @@ function stepFlock(f,dt){if(!f.alive)return;
    let danger=null,dd=1e9;for(const o of flocks){if(o===f||!o.alive)continue;for(const p of bodyPts(o)){const d=Math.hypot(p.x-f.x,p.y-f.y);if(d<dd){dd=d;danger=p}}}
    if(danger&&dd<90){f.ta=Math.atan2(f.y-danger.y,f.x-danger.x)+rnd(-.5,.5);f.boost=dd<50&&f.len>10}
    else{let best=null,bd=1e9;for(const p of pellets){const d=Math.hypot(p.x-f.x,p.y-f.y)-(p.lamb?120:0);if(d<bd){bd=d;best=p}}if(best)f.ta=Math.atan2(best.y-f.y,best.x-f.x);f.boost=false;
-    if(me&&me.alive&&f.len>me.len+8&&Math.hypot(me.x-f.x,me.y-f.y)<300&&Math.random()<.4){const ah=me.a;f.ta=Math.atan2(me.y+Math.sin(ah)*120-f.y,me.x+Math.cos(ah)*120-f.x);f.boost=f.len>12}}
+    if(me&&me.alive&&!(me.safe>0)&&f.len>me.len+8&&Math.hypot(me.x-f.x,me.y-f.y)<300&&Math.random()<LV().hunt){const ah=me.a;f.ta=Math.atan2(me.y+Math.sin(ah)*120-f.y,me.x+Math.cos(ah)*120-f.x);f.boost=f.len>12}}
    if(f.x<150)f.ta=0;if(f.x>WORLD-150)f.ta=Math.PI;if(f.y<150)f.ta=Math.PI/2;if(f.y>WORLD-150)f.ta=-Math.PI/2}}
  let da=((f.ta-f.a+Math.PI*3)%(Math.PI*2))-Math.PI;const turn=(f.boost?3.2:4.2)*dt;f.a+=Math.max(-turn,Math.min(turn,da));
  const sp=(f.boost?270:150)*dt;f.x+=Math.cos(f.a)*sp;f.y+=Math.sin(f.a)*sp;
- if(f.boost){f.dropT-=dt;if(f.dropT<=0){f.dropT=.35;f.len--;const t=f.trail[f.trail.length-1];addPellet(t.x,t.y,1)}}
+ if(f.boost){f.dropT-=dt;if(f.dropT<=0){f.dropT=.7;f.len--;const t=f.trail[f.trail.length-1];addPellet(t.x,t.y,1)}}
  f.trail.unshift({x:f.x,y:f.y});const maxPts=Math.ceil((f.len+2)*SP/1.5)+20;if(f.trail.length>maxPts)f.trail.length=maxPts;
  // walls
- if(f.x<R||f.y<R||f.x>WORLD-R||f.y>WORLD-R){die(f,null);return}
+ if(f.x<R||f.y<R||f.x>WORLD-R||f.y>WORLD-R){if(f.safe>0){f.a+=Math.PI;f.x=Math.max(R+2,Math.min(WORLD-R-2,f.x));f.y=Math.max(R+2,Math.min(WORLD-R-2,f.y))}else{die(f,null,'fence');return}}
+ if(f.safe>0)f.safe-=dt;
+ if(f.human&&f.len>=LV().goal){winLevel();return}
  // eat
  for(const p of pellets){if(Math.abs(p.x-f.x)<24&&Math.abs(p.y-f.y)<24&&Math.hypot(p.x-f.x,p.y-f.y)<R+10){p.eaten=true;f.len+=p.v;if(f.human)Snd.eat()}}
 }
@@ -87,18 +102,21 @@ let pat=null;
 function sheep(x,y,a,s=1,lamb=false,tint){g.save();g.translate(x,y);g.rotate(a);g.scale(s,s);
  g.fillStyle='rgba(0,0,0,.16)';g.beginPath();g.ellipse(2,5,13,8,0,0,7);g.fill();
  g.fillStyle=lamb?'#fffdf6':'#fbf4e6';[[-6,-4],[-6,4],[0,-6],[0,6],[5,-3],[5,3],[-1,0]].forEach(([u,v])=>{g.beginPath();g.arc(u,v,5.6,0,7);g.fill()});
- if(tint){g.fillStyle=tint;g.globalAlpha=.25;g.beginPath();g.arc(-1,0,9,0,7);g.fill();g.globalAlpha=1}
+ if(tint){g.fillStyle=tint;g.beginPath();g.ellipse(7,0,2.6,6.4,0,0,7);g.fill();g.beginPath();g.moveTo(5,5);g.lineTo(2,9);g.lineTo(7,7);g.fill()}
  g.fillStyle='#3d4b4a';g.beginPath();g.ellipse(10,0,5,4.2,0,0,7);g.fill();g.fillStyle='#fff';g.beginPath();g.arc(12,-1.6,1.1,0,7);g.arc(12,1.6,1.1,0,7);g.fill();g.restore()}
-function shepherd(f){g.save();g.translate(f.x,f.y);g.rotate(f.a);g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(2,4,15,11,0,0,7);g.fill();
+function shepherd(f){if(f.safe>0){g.strokeStyle=`rgba(255,217,138,${.5+Math.sin(performance.now()/90)*.3})`;g.lineWidth=4;g.beginPath();g.arc(f.x,f.y,24,0,7);g.stroke()}g.save();g.translate(f.x,f.y);g.rotate(f.a);g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(2,4,15,11,0,0,7);g.fill();
  g.fillStyle=f.col;g.beginPath();g.ellipse(0,0,12,13,0,0,7);g.fill();g.fillStyle='#f3c9a5';g.beginPath();g.arc(3,0,7,0,7);g.fill();g.fillStyle='#fbe8ca';g.beginPath();g.arc(1,0,7.4,Math.PI*.5,Math.PI*1.5);g.fill();
  g.strokeStyle='#7a4a2b';g.lineWidth=3;g.lineCap='round';g.beginPath();g.moveTo(-4,11);g.lineTo(16,11);g.arc(16,7,4,Math.PI/2,-Math.PI/2,true);g.stroke();g.restore();
  g.font='700 13px FavorSans, sans-serif';g.textAlign='center';g.fillStyle='rgba(41,70,74,.75)';const w=g.measureText(f.name).width+12;g.beginPath();g.roundRect?g.roundRect(f.x-w/2,f.y-36,w,18,9):g.rect(f.x-w/2,f.y-36,w,18);g.fill();g.fillStyle='#fff';g.fillText(f.name,f.x,f.y-23)}
 function draw(){const cam=me||{x:WORLD/2,y:WORLD/2};g.setTransform(DPR*Z,0,0,DPR*Z,0,0);const vw=VW/Z,vh=VH/Z,ox=cam.x-vw/2,oy=cam.y-vh/2;
  if(!pat)pat=g.createPattern(grass,'repeat');g.save();g.translate(-ox,-oy);g.fillStyle='#2f4f49';g.fillRect(ox,oy,vw,vh);g.fillStyle=pat;g.fillRect(0,0,WORLD,WORLD);
  g.strokeStyle='#9b5b2e';g.lineWidth=10;g.strokeRect(0,0,WORLD,WORLD);g.strokeStyle='#d9b98f';g.lineWidth=4;g.setLineDash([18,12]);g.strokeRect(-8,-8,WORLD+16,WORLD+16);g.setLineDash([]);
- const t=performance.now()/1000;for(const p of pellets){if(p.x<ox-20||p.x>ox+vw+20||p.y<oy-20||p.y>oy+vh+20)continue;sheep(p.x,p.y,Math.sin(t+p.b)*.5+p.b,p.lamb?.8:.68,p.lamb)}
+ const t=performance.now()/1000;for(const p of pellets){if(p.x<ox-20||p.x>ox+vw+20||p.y<oy-20||p.y>oy+vh+20)continue;sheep(p.x,p.y,p.b+Math.sin(t*.7+p.b)*.12,(p.lamb?.8:.68)*(1+Math.sin(t*3+p.b*5)*.03),p.lamb)}
  for(const f of flocks){if(!f.alive)continue;const pts=bodyPts(f);for(let i=pts.length-1;i>=0;i--){const p=pts[i],q=i?pts[i-1]:f;if(p.x<ox-30||p.x>ox+vw+30||p.y<oy-30||p.y>oy+vh+30)continue;sheep(p.x,p.y,Math.atan2(q.y-p.y,q.x-p.x),.95,false,f.col)}shepherd(f)}
+ if(me&&me.alive){const dEdge=Math.min(me.x,me.y,WORLD-me.x,WORLD-me.y);if(dEdge<160){g.strokeStyle=`rgba(200,99,84,${(1-dEdge/160)*.9})`;g.lineWidth=14;g.strokeRect(-4,-4,WORLD+8,WORLD+8)}}
  g.restore();
+ if(me&&me.alive&&Math.min(me.x,me.y,WORLD-me.x,WORLD-me.y)<160){g.setTransform(DPR,0,0,DPR,0,0);g.fillStyle='rgba(200,99,84,.9)';g.font='700 18px FavorSans, sans-serif';g.textAlign='center';g.fillText('⚠ Fence! Turn around!',VW/2,VH*.22)}
+ if(joy){g.setTransform(DPR,0,0,DPR,0,0);g.strokeStyle='rgba(255,248,235,.6)';g.lineWidth=3;g.beginPath();g.arc(joy.x,joy.y,46,0,7);g.stroke();g.fillStyle='rgba(255,248,235,.75)';g.beginPath();g.arc(joy.x+joy.dx,joy.y+joy.dy,20,0,7);g.fill()}
  // minimap
  g.setTransform(DPR,0,0,DPR,0,0);const m=Math.min(120,VW*.26),mx=12,my=VH-m-12;g.fillStyle='rgba(41,70,74,.7)';g.fillRect(mx,my,m,m);g.strokeStyle='#fff8eb';g.lineWidth=2;g.strokeRect(mx,my,m,m);
  for(const f of flocks){if(!f.alive)continue;g.fillStyle=f.human?'#ffd98a':f.col;g.beginPath();g.arc(mx+f.x/WORLD*m,my+f.y/WORLD*m,f.human?4:2.6,0,7);g.fill()}
@@ -106,18 +124,20 @@ function draw(){const cam=me||{x:WORLD/2,y:WORLD/2};g.setTransform(DPR*Z,0,0,DPR
 let last=performance.now(),boardT=0;
 function loop(now){const dt=Math.min(.04,(now-last)/1000);last=now;
  if(running){flocks.forEach(f=>stepFlock(f,dt));collisions();pellets=pellets.filter(p=>!p.eaten);while(pellets.length<700)addPellet();
-  $('len').textContent=me.len;boardT-=dt;if(boardT<=0){boardT=.5;const top=flocks.filter(f=>f.alive).sort((a,b)=>b.len-a.len).slice(0,5);$('board').innerHTML='<b>BIGGEST FLOCKS</b>'+top.map((f,i)=>`<div class="${f.human?'me':''}"><span>${i+1}. ${f.name.replace(/[<>&]/g,'')}</span><span>${f.len}</span></div>`).join('')+(top.includes(me)||!me.alive?'':`<div class="me"><span>You</span><span>${me.len}</span></div>`)}}
+  $('len').textContent=me.len;goalHud();boardT-=dt;if(boardT<=0){boardT=.2;const top=flocks.filter(f=>f.alive).sort((a,b)=>b.len-a.len).slice(0,5);$('board').innerHTML='<b>BIGGEST FLOCKS</b>'+top.map((f,i)=>`<div class="${f.human?'me':''}"><span>${i+1}. ${f.name.replace(/[<>&]/g,'')}</span><span>${f.len}</span></div>`).join('')+(top.includes(me)||!me.alive?'':`<div class="me"><span>You</span><span>${me.len}</span></div>`)}}
  draw();requestAnimationFrame(loop)}
 // ---------- controls ----------
-let dragging=false;
+let dragging=false,joy=null;
 const aim=e=>{target={x:e.clientX-VW/2,y:e.clientY-VH/2}};
-cv.addEventListener('pointerdown',e=>{dragging=true;aim(e)});addEventListener('pointermove',e=>{if(dragging||e.pointerType==='mouse')aim(e)});addEventListener('pointerup',()=>dragging=false);
+cv.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'){dragging=true;aim(e);return}joy={x:e.clientX,y:e.clientY,dx:0,dy:0,id:e.pointerId}});
+addEventListener('pointermove',e=>{if(joy&&e.pointerId===joy.id){let dx=e.clientX-joy.x,dy=e.clientY-joy.y;const d=Math.hypot(dx,dy);if(d>46){dx*=46/d;dy*=46/d}joy.dx=dx;joy.dy=dy;if(d>6)target={x:dx,y:dy};return}if(dragging||e.pointerType==='mouse')aim(e)});
+addEventListener('pointerup',e=>{dragging=false;if(joy&&e.pointerId===joy.id)joy=null});
 const bb=$('boost');const bon=v=>{boosting=v;bb.classList.toggle('on',v)};bb.addEventListener('pointerdown',e=>{e.stopPropagation();bon(true)});bb.addEventListener('pointerup',()=>bon(false));bb.addEventListener('pointerleave',()=>bon(false));
 addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Space'){e.preventDefault();bon(true)}if(e.code.startsWith('Arrow'))e.preventDefault()});addEventListener('keyup',e=>{keys[e.code]=false;if(e.code==='Space')bon(false)});
-$('go').onclick=start;$('name').addEventListener('keydown',e=>{if(e.key==='Enter')start()});
+$('go').onclick=()=>start();$('name').addEventListener('keydown',e=>{if(e.key==='Enter')start()});
 // demo world behind the start screen
 for(let i=0;i<700;i++)addPellet();for(let i=0;i<9;i++)flocks.push(makeFlock(NAMES[i],COLS[i%COLS.length],false));
-setInterval(()=>{if(!running){flocks.forEach(f=>stepFlock(f,.033));collisions();pellets=pellets.filter(p=>!p.eaten)}},33);
+setInterval(()=>{if(!running){flocks.forEach(f=>{if(!f.human)stepFlock(f,.033)});collisions();pellets=pellets.filter(p=>!p.eaten)}},33);
 requestAnimationFrame(loop);
-window.__flock={near:()=>{let b=null,d=1e9;for(const p of pellets){const q=Math.hypot(p.x-me.x,p.y-me.y);if(q<d){d=q;b=p}}return b?{x:b.x-me.x,y:b.y-me.y}:null},get s(){return{running,len:me?.len,alive:me?.alive,flocks:flocks.filter(f=>f.alive).length,pellets:pellets.length}},steer:(x,y)=>{target={x,y}},boost:v=>bon(v)};
+window.__flock={win:()=>{me.len=LV().goal},near:()=>{let b=null,d=1e9;for(const p of pellets){const q=Math.hypot(p.x-me.x,p.y-me.y);if(q<d){d=q;b=p}}return b?{x:b.x-me.x,y:b.y-me.y}:null},get s(){return{running,len:me?.len,alive:me?.alive,flocks:flocks.filter(f=>f.alive).length,pellets:pellets.length}},steer:(x,y)=>{target={x,y}},boost:v=>bon(v)};
 </script></body></html>
