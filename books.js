@@ -1,14 +1,20 @@
 // Books of the Bible the game can read. Matthew uses the original data files; the others use books/q-*.js.
-// November 2026: everyone reads Mark (the default book). Luke opens in December: remove its `soon` line then.
+// Reading plan: Mark in November 2026, Luke from 1 December 2026. Luke unlocks by itself on that date and becomes
+// the book everyone starts on. To move the date, change LUKE_OPENS. Test mode (team code) can open Luke early.
 // Loaded after content.js and before app.js.
 const BOOKS = [
   { id: 'matthew', name: 'Matthew', n: 28, color: '#c86354', blurb: 'Jesus the promised King' },
   { id: 'mark', name: 'Mark', n: 16, color: '#59877d', blurb: 'Jesus the fast-moving servant' },
-  { id: 'luke', name: 'Luke', n: 24, color: '#a28fbc', blurb: 'Jesus who came for everyone', soon: 'Coming soon' }
+  { id: 'luke', name: 'Luke', n: 24, color: '#a28fbc', blurb: 'Jesus who came for everyone', soon: 'Opens Dec 1', opens: '2026-12-01' }
 ];
-const DEFAULT_BOOK = 'mark';
+const LUKE_OPENS = '2026-12-01';
+const _today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+BOOKS.forEach(b => { if (b.opens && _today >= b.opens) delete b.soon; });
+const DEFAULT_BOOK = _today >= LUKE_OPENS ? 'luke' : 'mark';
+const testMode = () => { try { return typeof state !== 'undefined' && state.master === true; } catch { return false; } };
+const bookOpen = b => !b.soon || testMode();
 const BOOK_BASE = () => (window.V3_BASE || '');
-const curBookId = p => (p && BOOKS.some(b => b.id === p.book) && !bookInfo(p.book).soon ? p.book : DEFAULT_BOOK);
+const curBookId = p => (p && BOOKS.some(b => b.id === p.book) && bookOpen(bookInfo(p.book)) ? p.book : DEFAULT_BOOK);
 const bookInfo = id => BOOKS.find(b => b.id === id) || BOOKS[0];
 const curBook = p => bookInfo(curBookId(p));
 function bookDone(p, id = curBookId(p)) {

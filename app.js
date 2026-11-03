@@ -155,10 +155,10 @@ function render() {
 
   // Today
   $('#todayTitle').textContent = `${B.name} ${n}${little ? `:${littleSpan(n).join('–')}` : ''}`;
-  // Book chips on the Today card: switch between Matthew and Mark any time; upcoming books show "Coming soon"
+  // Book chips on the Today card: switch between open books any time; upcoming books show when they open
   const chips = $('#bookChips');
   if (chips) {
-    chips.innerHTML = `<span class="bk-chips-label">Book:</span>${BOOKS.map(b => b.soon ? `<span class="bk-chip soon" title="${b.soon}">🔒 ${b.name} · ${b.soon}</span>` : `<button class="bk-chip ${b.id === B.id ? 'on' : ''}" data-chip="${b.id}" style="--bk:${b.color}">${b.name} <small>${bookDone(p, b.id).length}/${b.n}</small></button>`).join('')}`;
+    chips.innerHTML = `<span class="bk-chips-label">Book:</span>${BOOKS.map(b => !bookOpen(b) ? `<span class="bk-chip soon" title="${b.soon}">🔒 ${b.name} · ${b.soon}</span>` : `<button class="bk-chip ${b.id === B.id ? 'on' : ''}" data-chip="${b.id}" style="--bk:${b.color}">${b.name} <small>${bookDone(p, b.id).length}/${b.n}</small></button>`).join('')}`;
     chips.querySelectorAll('[data-chip]').forEach(c => c.onclick = () => { if (c.dataset.chip === curBookId(p)) return; p.book = c.dataset.chip; p.today = null; save(); try { SkyAudio.sfx('page'); } catch { } render(); toast(`Now reading ${bookInfo(p.book).name}!`); });
   }
   if (done) {
@@ -195,7 +195,7 @@ function renderLoadout(p) {
   box.querySelectorAll('[data-loadout]').forEach(b => b.onclick = () => showRewards(b.dataset.loadout));
 }
 function showCongratulations() {
-  const p = profile(), B = curBook(p), left = BOOKS.filter(b => !b.soon && bookDone(p, b.id).length < b.n);
+  const p = profile(), B = curBook(p), left = BOOKS.filter(b => bookOpen(b) && bookDone(p, b.id).length < b.n);
   openModal(`${header('YOU DID IT', `${B.name} complete!`)}<p>You read all ${B.n} chapters of ${B.name}. What an adventure!${left.length ? ` Now choose your next book: ${left.map(b => b.name).join(', ')}. Your streak, home and outfits come with you!` : ' You finished every book that’s open so far. Luke opens in December!'}</p>${B.id === 'matthew' ? '<div class="notice">Every reading reward is now unlocked for this explorer.</div>' : ''}<button id="congratsDone" class="button primary wide">${left.length ? 'Choose my next book' : 'Keep exploring'}</button>`);
   $('#congratsDone').onclick = () => left.length ? showChapters() : closeModal();
 }
@@ -370,13 +370,13 @@ function showTransfer() {
   };
 }
 function showHow() {
-  openModal(`${header('HOW TO PLAY', 'Read • Answer • Fly')}<div class="chapter-row"><b>1. Read every day</b><small>One chapter a day, in order (this month: the book of Mark). Ages 4–6 read a short passage (and can tap Read more for the whole chapter); ages 7–12 read the whole chapter.</small></div><br><div class="chapter-row"><b>2. Answer three questions</b><small>Get all three right. You can try again as many times as you need.</small></div><br><div class="chapter-row"><b>3. Fly in Sky Run</b><small>Hold to rise, let go to fall. Dodge gears and zappers, catch stars, and grab glowing Bibles to throw pages.</small></div><br><div class="chapter-row"><b>4. Unlock and grow</b><small>Every chapter unlocks a new look. Every 3 chapters fills your home bar — pass the home quiz to move up from tent to trailer, house, and mansion.</small></div><br><div class="chapter-row"><b>5. Keep your streak</b><small>Read every day, weekends too, to keep your fire burning. Miss a day and the streak starts again.</small></div>`);
+  openModal(`${header('HOW TO PLAY', 'Read • Answer • Fly')}<div class="chapter-row"><b>1. Read every day</b><small>One chapter a day, in order (this month: the book of ${bookInfo(DEFAULT_BOOK).name}). Ages 4–6 read a short passage (and can tap Read more for the whole chapter); ages 7–12 read the whole chapter.</small></div><br><div class="chapter-row"><b>2. Answer three questions</b><small>Get all three right. You can try again as many times as you need.</small></div><br><div class="chapter-row"><b>3. Fly in Sky Run</b><small>Hold to rise, let go to fall. Dodge gears and zappers, catch stars, and grab glowing Bibles to throw pages.</small></div><br><div class="chapter-row"><b>4. Unlock and grow</b><small>Every chapter unlocks a new look. Every 3 chapters fills your home bar — pass the home quiz to move up from tent to trailer, house, and mansion.</small></div><br><div class="chapter-row"><b>5. Keep your streak</b><small>Read every day, weekends too, to keep your fire burning. Miss a day and the streak starts again.</small></div>`);
 }
 function showChapters() {
   const p = profile(); if (!p) { showProfiles(); return; }
   const today = todayChapter(p), master = isMaster(), B = curBook(p);
-  const shelf = `<div class="bk-shelf">${BOOKS.map(b => { const d = bookDone(p, b.id).length, can = !b.soon; return `<button class="bk-book ${b.id === B.id ? 'on' : ''} ${d >= b.n ? 'done' : ''}" data-book="${b.id}" style="--bk:${b.color}" ${can ? '' : 'disabled'}><b>${b.name}</b><small>${can ? `${d} / ${b.n}${d >= b.n ? ' ✓' : ''}` : `🔒 ${b.soon}`}</small><i>${b.blurb}</i></button>`; }).join('')}</div>`;
-  openModal(`${header('MY READING MAP', `${B.name} 1–${B.n}`)}${shelf}<p>This month we’re all reading Mark! Tap a book to switch. Your streak, home and outfits come with you. Finished chapters get a check mark; today’s chapter glows gold.${master ? ' <b>Test mode:</b> tap any chapter to open it.' : ''}</p><div class="chapter-grid">${bookQ(B.id).map((q, i) => { const n = i + 1, done = completed(p, n), isToday = n === today; return `<button class="chapter-tile ${done ? 'done' : ''} ${isToday ? 'today' : ''} ${!done && !isToday ? 'locked' : ''}" data-chapter="${n}" ${master ? '' : 'disabled'}>${B.name.slice(0, 3).toUpperCase()} ${n}<small>${done ? '✓ Read' : isToday ? 'Today' : 'Coming soon'}</small></button>`; }).join('')}</div><button id="viewRewards" class="button secondary wide">See my wardrobe</button>`);
+  const shelf = `<div class="bk-shelf">${BOOKS.map(b => { const d = bookDone(p, b.id).length, can = bookOpen(b); return `<button class="bk-book ${b.id === B.id ? 'on' : ''} ${d >= b.n ? 'done' : ''}" data-book="${b.id}" style="--bk:${b.color}" ${can ? '' : 'disabled'}><b>${b.name}</b><small>${can ? `${d} / ${b.n}${d >= b.n ? ' ✓' : ''}` : `🔒 ${b.soon}`}</small><i>${b.blurb}</i></button>`; }).join('')}</div>`;
+  openModal(`${header('MY READING MAP', `${B.name} 1–${B.n}`)}${shelf}<p>This month we’re all reading ${bookInfo(DEFAULT_BOOK).name}! Tap a book to switch. Your streak, home and outfits come with you. Finished chapters get a check mark; today’s chapter glows gold.${master ? ' <b>Test mode:</b> tap any chapter to open it.' : ''}</p><div class="chapter-grid">${bookQ(B.id).map((q, i) => { const n = i + 1, done = completed(p, n), isToday = n === today; return `<button class="chapter-tile ${done ? 'done' : ''} ${isToday ? 'today' : ''} ${!done && !isToday ? 'locked' : ''}" data-chapter="${n}" ${master ? '' : 'disabled'}>${B.name.slice(0, 3).toUpperCase()} ${n}<small>${done ? '✓ Read' : isToday ? 'Today' : 'Coming soon'}</small></button>`; }).join('')}</div><button id="viewRewards" class="button secondary wide">See my wardrobe</button>`);
   if (master) $('#modalCard').querySelectorAll('[data-chapter]').forEach(b => b.onclick = () => showReading(Number(b.dataset.chapter)));
   $('#modalCard').querySelectorAll('[data-book]').forEach(b => b.onclick = () => { if (b.dataset.book === curBookId(p)) return; p.book = b.dataset.book; p.today = null; save(); SkyAudio.sfx('page'); render(); showChapters(); toast(`Next up: ${bookInfo(p.book).name}!`); });
   $('#viewRewards').onclick = () => showRewards();
@@ -854,6 +854,7 @@ document.addEventListener('pointerdown', e => {
 $('#profileButton').onclick = showProfiles;
 $('#primaryButton').onclick = () => !freshLanding && profile() ? $('#dashboard').scrollIntoView({ behavior: 'smooth' }) : showProfiles();
 $('#howButton').onclick = showHow;
+{ const mb = document.getElementById('monthBook'); if (mb) mb.textContent = bookInfo(DEFAULT_BOOK).name; }
 $('#readTodayButton').onclick = () => { const p = profile(); if (p) showReading(todayChapter(p)); };
 $('#mapButton').onclick = showChapters;
 $('#customizeButton').onclick = showCustomize;

@@ -266,6 +266,7 @@
     { id: 'read14', cat: 'read', ico: '🧭', name: 'Trailblazer', how: 'Read 14 chapters', test: p => totalChapters(p) >= 14 },
     { id: 'matthew', cat: 'read', ico: '👑', name: 'Matthew Master', how: 'Finish all 28 chapters of Matthew', test: p => bookDone(p, 'matthew').length >= 28 },
     { id: 'mark', cat: 'read', ico: '🦁', name: 'Mark Finisher', how: 'Finish all 16 chapters of Mark', test: p => bookDone(p, 'mark').length >= 16 },
+    { id: 'luke', cat: 'read', ico: '🕊️', name: 'Luke Finisher', how: 'Finish all 24 chapters of Luke', test: p => bookDone(p, 'luke').length >= 24 },
     { id: 'read50', cat: 'read', ico: '🗺️', name: 'Bible Explorer', how: 'Read 50 chapters in all', test: p => totalChapters(p) >= 50 },
     { id: 'reread', cat: 'read', ico: '🔁', name: 'Read It Again', how: 'Reread a book you finished', test: p => (p.rereadCount || 0) >= 1 },
     // streaks
